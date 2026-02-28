@@ -1,0 +1,29 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# PyTorch / transformers cached models
+~/.cache/torch/
+~/.cache/huggingface/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code settings
+.vscode/
+
+# Uvicorn auto-reload files
+*.pid
+
+#Image files
+images/
