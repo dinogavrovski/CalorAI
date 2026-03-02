@@ -27,3 +27,36 @@ Thumbs.db
 
 #Image files
 images/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+*.venv
+
+# Virtual environment
+.venv/
+env/
+venv/
+
+# PEP 582 / Python local packages
+__pypackages__/
+
+# VS Code
+.vscode/
+
+# Mac / Linux
+.DS_Store
+*.swp
+
+# Logs
+*.log
+
+# SQLite / temporary DB files
+*.db
+*.sqlite3
+
+# Ignore .env files (if you store secrets)
+.env
