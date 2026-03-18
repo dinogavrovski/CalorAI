@@ -60,3 +60,6 @@ __pypackages__/
 
 # Ignore .env files (if you store secrets)
 .env
+
+# YOLOv8 models
+*.pt

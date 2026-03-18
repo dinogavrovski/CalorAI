@@ -1,21 +1,17 @@
-from fastapi import APIRouter, UploadFile, File, Depends
-from app.schemas.detection import DetectionPayload
-from sqlalchemy.orm import Session
-from app.db.database import get_db
-from app.services.calorie_estimator import estimate_calories
+from fastapi import APIRouter, Depends
 from app.dependencies.auth import get_current_user
-from app.services.model_inference import run_inference
+from app.schemas.text_log import TextLogRequest, TextLogResponse
+from app.services.text_calorie_estimator import estimate_from_text_note
 
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
 
-@router.post("/analyze-meal")
-async def analyze_meal(file: UploadFile = File(...), current_user=Depends(get_current_user), db: Session = Depends(get_db)):
-    image_bytes = await file.read()
-
-    detection_payload = run_inference(image_bytes)
-    result = estimate_calories(detection_payload)
-
+@router.post("/log-text", response_model=TextLogResponse)
+async def log_food_text(
+    payload: TextLogRequest,
+    current_user=Depends(get_current_user),
+):
+    result = estimate_from_text_note(payload.note)
     return result
 

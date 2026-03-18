@@ -4,7 +4,6 @@ from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse, UserLogin
 from app.db.database import get_db
 from app.core.security import hash_password, verify_password, create_access_token
-from app.services.calorie_estimator import estimate_calories
 
 router = APIRouter()
 
