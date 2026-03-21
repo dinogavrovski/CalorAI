@@ -1,11 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from app.db.database import SessionLocal
 from app.models.user import User
 from app.core.security import hash_password, verify_password, create_access_token
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+
+class RegisterRequest(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
 
 def get_db():
     db = SessionLocal()
@@ -15,31 +26,65 @@ def get_db():
         db.close()
 
 @router.post("/register")
-def register(email: str, password: str, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(User.email == email).first()
+def register(payload: RegisterRequest, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.email == payload.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
     user = User(
-        email=email,
-        hashed_password=hash_password(password)
+        email=payload.email,
+        hashed_password=hash_password(payload.password)
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
-    return {"message": "User created successfully"}
+    token = create_access_token({"sub": str(user.id)})
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(user.id),
+            "username": payload.username,
+            "email": user.email,
+        },
+    }
 
 @router.post("/login")
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    payload: LoginRequest,
     db: Session = Depends(get_db)
 ):
-    user = db.query(User).filter(User.email == form_data.username).first()
+    # Frontend sends `username`; treat it as email when possible and
+    # support simple demo usernames by mapping to a local email domain.
+    normalized_email = (
+        payload.username
+        if "@" in payload.username
+        else f"{payload.username}@local.dev"
+    )
+    user = db.query(User).filter(User.email == normalized_email).first()
 
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user:
+        # Demo-friendly flow used by current frontend: first login can create user.
+        user = User(
+            email=normalized_email,
+            hashed_password=hash_password(payload.password),
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    if not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_access_token({"sub": str(user.id)})
 
-    return {"access_token": token, "token_type": "bearer"}
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(user.id),
+            "username": payload.username,
+            "email": user.email,
+        },
+    }
