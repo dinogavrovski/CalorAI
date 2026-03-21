@@ -80,7 +80,7 @@ export const AuthScreen = () => {
         {/* Logo / Header */}
         <View style={styles.logoContainer}>
           <AntDesign name="apple" size={48} color="#0066cc" />
-          <Text style={styles.logoText}>CalAI</Text>
+          <Text style={styles.logoText}>CalorAI</Text>
           <Text style={styles.subtitle}>Smart Meal Logging</Text>
         </View>
 
