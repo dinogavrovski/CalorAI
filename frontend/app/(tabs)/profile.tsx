@@ -18,6 +18,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Profile</Text>
+        <Text style={styles.subtitle}>Your nutrition identity</Text>
 
         <View style={styles.card}>
           <View style={styles.avatar}>
@@ -45,17 +46,18 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 20, paddingBottom: 100 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: 14 },
-  card: { backgroundColor: '#fff', borderColor: colors.border, borderWidth: 1, borderRadius: 16, padding: 18, alignItems: 'center', marginBottom: 14 },
+  title: { fontSize: 30, fontWeight: '900', color: colors.text, letterSpacing: -0.5 },
+  subtitle: { fontSize: 13, color: colors.muted, marginBottom: 14 },
+  card: { backgroundColor: '#fff', borderColor: colors.border, borderWidth: 1, borderRadius: 18, padding: 18, alignItems: 'center', marginBottom: 14, shadowColor: '#A89273', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
   avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   avatarText: { color: '#fff', fontSize: 28, fontWeight: '800' },
   name: { fontSize: 20, fontWeight: '800', color: colors.text },
   email: { fontSize: 13, color: colors.muted, marginTop: 4 },
-  section: { backgroundColor: '#fff', borderColor: colors.border, borderWidth: 1, borderRadius: 16, padding: 16, gap: 10 },
+  section: { backgroundColor: '#fff', borderColor: colors.border, borderWidth: 1, borderRadius: 18, padding: 16, gap: 10 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 },
-  item: { flexDirection: 'row', justifyContent: 'space-between' },
+  item: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#FCFAF7', borderWidth: 1, borderColor: '#EDE4D8', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12 },
   itemLabel: { color: colors.muted, fontSize: 13 },
   itemValue: { color: colors.text, fontWeight: '700', fontSize: 13 },
-  logoutBtn: { marginTop: 14, height: 46, borderRadius: 12, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center' },
+  logoutBtn: { marginTop: 14, height: 48, borderRadius: 14, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center' },
   logoutText: { color: '#B91C1C', fontWeight: '700' },
 });

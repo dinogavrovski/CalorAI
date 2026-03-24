@@ -67,7 +67,3 @@ __pypackages__/
 # Local AI agent tooling
 .agents/
 skills-lock.json
-
-# Local AI agent tooling
-.agents/
-skills-lock.json

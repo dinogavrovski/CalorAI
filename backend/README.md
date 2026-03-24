@@ -9,6 +9,11 @@ Copy-Item backend/.env.example .env
 
 Set `DATABASE_URL` to your Supabase Postgres URL in `.env`.
 
+For Google sign-in, also set:
+
+- `GOOGLE_WEB_CLIENT_ID`
+- `GOOGLE_ANDROID_CLIENT_ID`
+
 ## 2) Start API
 From the repository root:
 

@@ -7,6 +7,12 @@ class ApiService {
   private api: AxiosInstance;
   private token: string | null = null;
 
+  private async persistAuth(auth: AuthResponse): Promise<void> {
+    this.token = auth.access_token;
+    await AsyncStorage.setItem('authToken', this.token);
+    await AsyncStorage.setItem('user', JSON.stringify(auth.user));
+  }
+
   constructor() {
     this.api = axios.create({
       baseURL: API_CONFIG.BASE_URL,
@@ -46,9 +52,7 @@ class ApiService {
       API_CONFIG.ENDPOINTS.AUTH.REGISTER,
       { username, email, password }
     );
-    this.token = response.data.access_token;
-    await AsyncStorage.setItem('authToken', this.token);
-    await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
+    await this.persistAuth(response.data);
     return response.data;
   }
 
@@ -57,9 +61,16 @@ class ApiService {
       API_CONFIG.ENDPOINTS.AUTH.LOGIN,
       { username, password }
     );
-    this.token = response.data.access_token;
-    await AsyncStorage.setItem('authToken', this.token);
-    await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
+    await this.persistAuth(response.data);
+    return response.data;
+  }
+
+  async loginWithGoogle(idToken: string): Promise<AuthResponse> {
+    const response = await this.api.post<AuthResponse>(
+      API_CONFIG.ENDPOINTS.AUTH.GOOGLE,
+      { id_token: idToken }
+    );
+    await this.persistAuth(response.data);
     return response.data;
   }
 
