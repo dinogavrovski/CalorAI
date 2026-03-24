@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../constants/config';
-import { TextLogResponse, AuthResponse, User } from '../types';
+import { TextLogResponse, AuthResponse, User, MealHistory } from '../types';
 
 class ApiService {
   private api: AxiosInstance;
@@ -88,8 +88,18 @@ class ApiService {
   }
 
   // Meal History Methods
-  async getMealHistory(): Promise<any[]> {
-    const response = await this.api.get(API_CONFIG.ENDPOINTS.USER.MEAL_HISTORY);
+  async saveMealHistory(payload: TextLogResponse): Promise<MealHistory> {
+    const response = await this.api.post<MealHistory>(
+      API_CONFIG.ENDPOINTS.USER.MEAL_HISTORY,
+      payload
+    );
+    return response.data;
+  }
+
+  async getMealHistory(limit = 30): Promise<MealHistory[]> {
+    const response = await this.api.get<MealHistory[]>(API_CONFIG.ENDPOINTS.USER.MEAL_HISTORY, {
+      params: { limit },
+    });
     return response.data;
   }
 

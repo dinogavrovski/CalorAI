@@ -7,7 +7,7 @@ from app.db.database import SessionLocal
 from app.models.user import User
 from app.core.security import SECRET_KEY, ALGORITHM
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 # DB dependency
 def get_db():

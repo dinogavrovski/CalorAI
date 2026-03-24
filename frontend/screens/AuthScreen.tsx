@@ -1,313 +1,167 @@
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import {
-  TextInput,
-  Button,
-  Text,
-  Surface,
-  HelperText,
-  TouchableRipple,
-} from 'react-native-paper';
-import { useAuth } from '../context/AuthContext';
-import { AntDesign } from '@expo/vector-icons';
+import { View, Text, TextInput, Pressable, ScrollView, Alert, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/context/AuthContext';
+import { colors } from '@/constants/uiTheme';
 
-export const AuthScreen = () => {
+type AuthMode = 'login' | 'signup';
+
+export default function AuthScreen() {
   const { login, register, isLoading } = useAuth();
-  const [isLoginMode, setIsLoginMode] = useState(true);
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [errors, setErrors] = useState<any>({});
+  const router = useRouter();
+  const [mode, setMode] = useState<AuthMode>('login');
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const validate = () => {
-    const newErrors: any = {};
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
 
-    if (!username.trim()) {
-      newErrors.username = 'Username is required';
+  const handleLogin = async () => {
+    setErrorMessage('');
+    if (!formData.username.trim() || !formData.password.trim()) {
+      const message = 'Please fill in all fields';
+      Alert.alert('Error', message);
+      setErrorMessage(message);
+      return;
     }
-
-    if (!isLoginMode && !email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!isLoginMode && !email.includes('@')) {
-      newErrors.email = 'Enter a valid email';
-    }
-
-    if (!password.trim()) {
-      newErrors.password = 'Password is required';
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    if (!isLoginMode && password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleAuth = async () => {
-    if (!validate()) return;
 
     try {
-      if (isLoginMode) {
-        await login(username, password);
-      } else {
-        await register(username, email, password);
-      }
+      await login(formData.username, formData.password);
+      router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert(
-        'Auth Error',
-        error.response?.data?.detail || 'Authentication failed'
-      );
+      const message = error?.response?.data?.detail || 'Invalid credentials. Please try again.';
+      Alert.alert('Login Failed', message);
+      setErrorMessage(message);
+    }
+  };
+
+  const handleSignup = async () => {
+    setErrorMessage('');
+    if (!formData.username.trim() || !formData.email.trim() || !formData.password.trim()) {
+      const message = 'Please fill in all fields';
+      Alert.alert('Error', message);
+      setErrorMessage(message);
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      const message = 'Passwords do not match';
+      Alert.alert('Error', message);
+      setErrorMessage(message);
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      const message = 'Password must be at least 6 characters';
+      Alert.alert('Error', message);
+      setErrorMessage(message);
+      return;
+    }
+
+    try {
+      await register(formData.username, formData.email, formData.password);
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || 'Unable to create account. Please try again.';
+      Alert.alert('Signup Failed', message);
+      setErrorMessage(message);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Logo / Header */}
-        <View style={styles.logoContainer}>
-          <AntDesign name="apple" size={48} color="#0066cc" />
-          <Text style={styles.logoText}>CalorAI</Text>
-          <Text style={styles.subtitle}>Smart Meal Logging</Text>
+    <SafeAreaView style={styles.root}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.brand}>CalAI</Text>
+          <Text style={styles.tagline}>Smart Nutrition Tracking</Text>
         </View>
 
-        {/* Auth Mode Toggle */}
-        <Surface style={styles.modeToggle}>
-          <View style={styles.toggleButtonGroup}>
-            <TouchableRipple
-              style={[
-                styles.toggleButton,
-                isLoginMode && styles.toggleButtonActive,
-              ]}
-              onPress={() => {
-                setIsLoginMode(true);
-                setErrors({});
-              }}
-            >
-              <Text style={isLoginMode ? styles.toggleTextActive : styles.toggleText}>
-                Login
-              </Text>
-            </TouchableRipple>
-            <TouchableRipple
-              style={[
-                styles.toggleButton,
-                !isLoginMode && styles.toggleButtonActive,
-              ]}
-              onPress={() => {
-                setIsLoginMode(false);
-                setErrors({});
-              }}
-            >
-              <Text style={!isLoginMode ? styles.toggleTextActive : styles.toggleText}>
-                Register
-              </Text>
-            </TouchableRipple>
+        <View style={styles.card}>
+          <View style={styles.modeRow}>
+            <Pressable style={[styles.modeBtn, mode === 'login' && styles.modeBtnActive]} onPress={() => setMode('login')}>
+              <Text style={[styles.modeTxt, mode === 'login' && styles.modeTxtActive]}>Login</Text>
+            </Pressable>
+            <Pressable style={[styles.modeBtn, mode === 'signup' && styles.modeBtnActive]} onPress={() => setMode('signup')}>
+              <Text style={[styles.modeTxt, mode === 'signup' && styles.modeTxtActive]}>Sign Up</Text>
+            </Pressable>
           </View>
-        </Surface>
 
-        {/* Form */}
-        <Surface style={styles.formContainer}>
-          {/* Username */}
           <TextInput
-            label="Username"
-            value={username}
-            onChangeText={setUsername}
-            mode="outlined"
             style={styles.input}
+            placeholder="Username"
+            placeholderTextColor="#94A3B8"
+            value={formData.username}
+            onChangeText={(text) => setFormData({ ...formData, username: text })}
             editable={!isLoading}
-            error={!!errors.username}
           />
-          {errors.username && (
-            <HelperText type="error" visible={!!errors.username}>
-              {errors.username}
-            </HelperText>
+
+          {mode === 'signup' && (
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#94A3B8"
+              value={formData.email}
+              keyboardType="email-address"
+              onChangeText={(text) => setFormData({ ...formData, email: text })}
+              editable={!isLoading}
+            />
           )}
 
-          {/* Email (Register Only) */}
-          {!isLoginMode && (
-            <>
-              <TextInput
-                label="Email"
-                value={email}
-                onChangeText={setEmail}
-                mode="outlined"
-                style={styles.input}
-                keyboardType="email-address"
-                editable={!isLoading}
-                error={!!errors.email}
-              />
-              {errors.email && (
-                <HelperText type="error" visible={!!errors.email}>
-                  {errors.email}
-                </HelperText>
-              )}
-            </>
-          )}
-
-          {/* Password */}
           <TextInput
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            mode="outlined"
             style={styles.input}
+            placeholder="Password"
+            placeholderTextColor="#94A3B8"
             secureTextEntry
+            value={formData.password}
+            onChangeText={(text) => setFormData({ ...formData, password: text })}
             editable={!isLoading}
-            error={!!errors.password}
           />
-          {errors.password && (
-            <HelperText type="error" visible={!!errors.password}>
-              {errors.password}
-            </HelperText>
+
+          {mode === 'signup' && (
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm Password"
+              placeholderTextColor="#94A3B8"
+              secureTextEntry
+              value={formData.confirmPassword}
+              onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
+              editable={!isLoading}
+            />
           )}
 
-          {/* Confirm Password (Register Only) */}
-          {!isLoginMode && (
-            <>
-              <TextInput
-                label="Confirm Password"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                mode="outlined"
-                style={styles.input}
-                secureTextEntry
-                editable={!isLoading}
-                error={!!errors.confirmPassword}
-              />
-              {errors.confirmPassword && (
-                <HelperText type="error" visible={!!errors.confirmPassword}>
-                  {errors.confirmPassword}
-                </HelperText>
-              )}
-            </>
-          )}
-
-          {/* Submit Button */}
-          <Button
-            mode="contained"
-            onPress={handleAuth}
-            loading={isLoading}
+          <Pressable
+            style={styles.submitBtn}
+            onPress={mode === 'login' ? handleLogin : handleSignup}
             disabled={isLoading}
-            style={styles.submitButton}
           >
-            {isLoginMode ? 'Login' : 'Create Account'}
-          </Button>
-        </Surface>
+            <Text style={styles.submitTxt}>{isLoading ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create Account'}</Text>
+          </Pressable>
 
-        {/* Tips */}
-        <View style={styles.tipsContainer}>
-          <Text style={styles.tipsTitle}>
-            {isLoginMode ? '💡 Demo Tip' : '📝 Getting Started'}
-          </Text>
-          <Text style={styles.tipsText}>
-            {isLoginMode
-              ? 'Use any username and password to log in (backend demo mode)'
-              : 'Create an account to start logging meals and tracking calories'}
-          </Text>
+          {!!errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 32,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  logoText: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#0066cc',
-    marginTop: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 4,
-  },
-  modeToggle: {
-    marginBottom: 20,
-    padding: 8,
-    borderRadius: 12,
-  },
-  formContainer: {
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  input: {
-    marginBottom: 8,
-  },
-  submitButton: {
-    paddingVertical: 8,
-    marginTop: 12,
-  },
-  tipsContainer: {
-    padding: 16,
-    backgroundColor: '#e8f4fd',
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#0066cc',
-  },
-  tipsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0066cc',
-    marginBottom: 8,
-  },
-  tipsText: {
-    fontSize: 12,
-    color: '#666',
-    lineHeight: 18,
-  },
-  toggleButtonGroup: {
-    flexDirection: 'row',
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#f0f0f0',
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  toggleButtonActive: {
-    backgroundColor: '#0066cc',
-  },
-  toggleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#999',
-  },
-  toggleTextActive: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-  },
+  root: { flex: 1, backgroundColor: colors.bg },
+  content: { flexGrow: 1, justifyContent: 'center', padding: 22 },
+  header: { alignItems: 'center', marginBottom: 20 },
+  brand: { fontSize: 34, fontWeight: '900', color: colors.text },
+  tagline: { color: colors.muted, fontSize: 13, marginTop: 4 },
+  card: { backgroundColor: '#fff', borderColor: colors.border, borderWidth: 1, borderRadius: 18, padding: 16 },
+  modeRow: { flexDirection: 'row', backgroundColor: '#EEF2F7', borderRadius: 12, padding: 4, marginBottom: 14 },
+  modeBtn: { flex: 1, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  modeBtnActive: { backgroundColor: colors.primary },
+  modeTxt: { fontWeight: '700', color: '#334155' },
+  modeTxtActive: { color: '#fff' },
+  input: { height: 46, borderRadius: 12, borderColor: colors.border, borderWidth: 1, paddingHorizontal: 12, backgroundColor: '#F8FAFC', color: colors.text, marginBottom: 10 },
+  submitBtn: { marginTop: 8, height: 46, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  submitTxt: { color: '#fff', fontWeight: '800', fontSize: 15 },
+  errorText: { marginTop: 10, color: colors.danger, fontSize: 13, textAlign: 'center' },
 });

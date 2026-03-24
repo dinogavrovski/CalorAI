@@ -3,13 +3,13 @@ export interface TextLogItem {
   note_part: string;
   parsed_food: string;
   quantity: number;
-  unit: string;
+  unit: string | null;
   estimated_grams: number;
   kcal_per_gram: number;
   calories: number;
   calorie_range: [number, number];
   nutrition_source: string;
-  matched_description: string;
+  matched_description: string | null;
 }
 
 export interface TextLogResponse {
@@ -32,12 +32,12 @@ export interface AuthResponse {
 }
 
 export interface MealHistory {
-  id: string;
-  user_id: string;
+  id: number;
+  user_id: number;
   note: string;
   items: TextLogItem[];
   total_calories: number;
-  actual_calories?: number;
+  total_calorie_range: [number, number];
   timestamp: string;
 }
 

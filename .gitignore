@@ -63,3 +63,11 @@ __pypackages__/
 
 # YOLOv8 models
 *.pt
+
+# Local AI agent tooling
+.agents/
+skills-lock.json
+
+# Local AI agent tooling
+.agents/
+skills-lock.json

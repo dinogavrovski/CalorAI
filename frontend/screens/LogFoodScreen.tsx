@@ -24,6 +24,7 @@ export const LogFoodScreen = () => {
   const [note, setNote] = useState('');
   const [result, setResult] = useState<TextLogResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [adjustments, setAdjustments] = useState<{ [key: number]: number }>({});
 
   const handleLogFood = async () => {
@@ -194,11 +195,23 @@ export const LogFoodScreen = () => {
 
             <Button
               mode="contained"
-              onPress={() => {
-                Alert.alert('Success', 'Meal logged successfully!');
-                setNote('');
-                setResult(null);
+              onPress={async () => {
+                if (!result) return;
+
+                setSaving(true);
+                try {
+                  await apiService.saveMealHistory(result);
+                  Alert.alert('Success', 'Meal saved to history!');
+                  setNote('');
+                  setResult(null);
+                } catch {
+                  Alert.alert('Error', 'Failed to save meal to history');
+                } finally {
+                  setSaving(false);
+                }
               }}
+              loading={saving}
+              disabled={saving}
               style={styles.logButton}
             >
               Save to History

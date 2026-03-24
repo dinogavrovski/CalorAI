@@ -1,40 +1,50 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { PaperProvider } from 'react-native-paper';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Stack } from 'expo-router';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { ActivityIndicator, View } from 'react-native';
-import { AuthScreen } from '@/screens/AuthScreen';
-import { AppNavigator } from '@/navigation/AppNavigator';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { colors } from '@/constants/uiTheme';
 
 function RootLayoutContent() {
   const { isSignedIn, isLoading } = useAuth();
-  const colorScheme = useColorScheme();
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      {isSignedIn ? <AppNavigator /> : <AuthScreen />}
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        {isSignedIn ? (
+          <Stack.Screen name="(tabs)" />
+        ) : (
+          <Stack.Screen name="auth" options={{ animationEnabled: false }} />
+        )}
+      </Stack>
       <StatusBar style="auto" />
-    </ThemeProvider>
+    </>
   );
 }
 
 export default function RootLayout() {
   return (
-    <PaperProvider>
+    <SafeAreaProvider>
       <AuthProvider>
         <RootLayoutContent />
       </AuthProvider>
-    </PaperProvider>
+    </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.bg,
+  },
+});
