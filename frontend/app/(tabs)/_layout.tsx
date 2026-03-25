@@ -1,83 +1,143 @@
-import { Tabs } from 'expo-router';
+import { withLayoutContext } from 'expo-router';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { Home, List, TrendingUp, User } from 'lucide-react-native';
-import { Platform, useColorScheme } from 'react-native';
+import { Platform, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '@/constants/uiTheme';
+import { paperTheme } from '@/constants/paperTheme';
+import BottomSheetMealLogger from '@/components/BottomSheetMealLogger';
+import { Plus } from 'lucide-react-native';
+
+const TopTab = createMaterialTopTabNavigator();
+const SwipeTabs = withLayoutContext(TopTab.Navigator);
 
 export default function TabsLayout() {
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const [mealLoggerVisible, setMealLoggerVisible] = useState(false);
   const bottomInset = insets.bottom > 0 ? insets.bottom : Platform.OS === 'android' ? 14 : 10;
-  const tabBarHeight = 56 + bottomInset;
+  const tabBarHeight = 68;
+  const tabBarWidth = Math.min(width - 120, 430);
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarHideOnKeyboard: true,
-        tabBarStyle: {
-          position: 'absolute',
-          left: 12,
-          right: 12,
-          bottom: bottomInset,
-          borderRadius: 18,
-          backgroundColor: isDark ? '#111827' : '#FFFFFF',
-          borderTopColor: isDark ? '#334155' : '#E6DED1',
-          borderTopWidth: 1,
-          paddingBottom: Math.max(8, bottomInset - 2),
-          paddingTop: 8,
-          height: tabBarHeight,
-          shadowColor: '#80684A',
-          shadowOpacity: 0.15,
-          shadowRadius: 16,
-          shadowOffset: { width: 0, height: 8 },
-          elevation: 8,
-        },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: isDark ? '#9CA3AF' : '#64748B',
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Home color={color} size={size} />
-          ),
+    <>
+      <SwipeTabs
+        screenOptions={{
+          headerShown: false,
+          tabBarPosition: 'bottom',
+          swipeEnabled: true,
+          animationEnabled: true,
+          lazy: true,
+          sceneStyle: {
+            backgroundColor: paperTheme.colors.background,
+          },
+          tabBarStyle: {
+            position: 'absolute',
+            left: 16,
+            bottom: bottomInset + 4,
+            width: tabBarWidth,
+            borderRadius: 22,
+            backgroundColor: '#242424',
+            borderTopColor: '#353535',
+            borderTopWidth: 1,
+            paddingBottom: 5,
+            paddingTop: 5,
+            height: tabBarHeight,
+            overflow: 'hidden',
+            elevation: 12,
+          },
+          tabBarIndicatorStyle: {
+            backgroundColor: 'transparent',
+          },
+          tabBarPressColor: 'transparent',
+          tabBarShowIcon: true,
+          tabBarActiveTintColor: paperTheme.colors.primary,
+          tabBarInactiveTintColor: '#8A8A8A',
+          tabBarItemStyle: {
+            borderRadius: 14,
+            marginHorizontal: 4,
+            marginVertical: 1,
+            paddingVertical: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+          },
+          tabBarIconStyle: {},
+          tabBarLabelStyle: {
+            fontSize: 11,
+            lineHeight: 14,
+            fontWeight: '600',
+            marginBottom: 0,
+            marginTop: 1,
+          },
         }}
+      >
+        <SwipeTabs.Screen
+          name="index"
+          options={{
+            title: 'Home',
+            tabBarIcon: ({ color, size }) => (
+              <Home color={color} size={size} />
+            ),
+          }}
+        />
+        <SwipeTabs.Screen
+          name="logs"
+          options={{
+            title: 'Logs',
+            tabBarIcon: ({ color, size }) => (
+              <List color={color} size={size} />
+            ),
+          }}
+        />
+        <SwipeTabs.Screen
+          name="progress"
+          options={{
+            title: 'Progress',
+            tabBarIcon: ({ color, size }) => (
+              <TrendingUp color={color} size={size} />
+            ),
+          }}
+        />
+        <SwipeTabs.Screen
+          name="profile"
+          options={{
+            title: 'Profile',
+            href: null,
+            tabBarIconStyle: {
+              marginTop: 2,
+            },
+            tabBarIcon: ({ color, size }) => (
+              <User color={color} size={size} />
+            ),
+          }}
+        />
+      </SwipeTabs>
+
+      <Pressable style={[styles.fab, { bottom: bottomInset + 4 }]} onPress={() => setMealLoggerVisible(true)}>
+        <Plus size={26} color="#E58A3A" />
+      </Pressable>
+
+      <BottomSheetMealLogger
+        isVisible={mealLoggerVisible}
+        onClose={() => setMealLoggerVisible(false)}
+        onSuccess={() => {}}
       />
-      <Tabs.Screen
-        name="logs"
-        options={{
-          title: 'Logs',
-          tabBarIcon: ({ color, size }) => (
-            <List color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="progress"
-        options={{
-          title: 'Progress',
-          tabBarIcon: ({ color, size }) => (
-            <TrendingUp color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <User color={color} size={size} />
-          ),
-        }}
-      />
-    </Tabs>
+    </>
   );
 }
+
+const styles = StyleSheet.create({
+  fab: {
+    position: 'absolute',
+    right: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#262626',
+    borderWidth: 1,
+    borderColor: '#383838',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 10,
+  },
+});

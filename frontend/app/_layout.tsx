@@ -3,7 +3,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { colors } from '@/constants/uiTheme';
+import { PaperProvider } from 'react-native-paper';
+import { paperTheme } from '@/constants/paperTheme';
 
 function RootLayoutContent() {
   const { isSignedIn, isLoading } = useAuth();
@@ -11,18 +12,23 @@ function RootLayoutContent() {
   if (isLoading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={paperTheme.colors.primary} />
       </View>
     );
   }
 
   return (
     <>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: paperTheme.colors.background },
+        }}
+      >
         {isSignedIn ? (
           <Stack.Screen name="(tabs)" />
         ) : (
-          <Stack.Screen name="auth" options={{ animationEnabled: false }} />
+          <Stack.Screen name="auth" options={{ animation: 'none' }} />
         )}
       </Stack>
       <StatusBar style="auto" />
@@ -33,9 +39,11 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <RootLayoutContent />
-      </AuthProvider>
+      <PaperProvider theme={paperTheme}>
+        <AuthProvider>
+          <RootLayoutContent />
+        </AuthProvider>
+      </PaperProvider>
     </SafeAreaProvider>
   );
 }
@@ -45,6 +53,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.bg,
+    backgroundColor: paperTheme.colors.background,
   },
 });

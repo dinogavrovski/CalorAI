@@ -67,3 +67,6 @@ __pypackages__/
 # Local AI agent tooling
 .agents/
 skills-lock.json
+
+# IDE Metadata
+.idea/

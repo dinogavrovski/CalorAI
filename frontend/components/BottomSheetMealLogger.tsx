@@ -7,12 +7,13 @@ import {
   Pressable,
   StyleSheet,
   Animated,
-  KeyboardAvoidingView,
+  Keyboard,
+  Easing,
   Platform,
 } from 'react-native';
 import { X, Send } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '@/constants/uiTheme';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { paperTheme } from '@/constants/paperTheme';
 import apiService from '@/services/api';
 import { Alert } from 'react-native';
 
@@ -27,28 +28,91 @@ export default function BottomSheetMealLogger({
   onClose,
   onSuccess,
 }: BottomSheetMealLoggerProps) {
+  const insets = useSafeAreaInsets();
   const [mealInput, setMealInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(isVisible);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(28)).current;
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
   const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (isVisible) {
+      setIsMounted(true);
       setMealInput('');
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-      setTimeout(() => inputRef.current?.focus(), 200);
+      fadeAnim.setValue(0);
+      slideAnim.setValue(28);
+
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 260,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 320,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+      ]).start(() => {
+        setTimeout(() => inputRef.current?.focus(), 80);
+      });
     } else {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      if (!isMounted) {
+        return;
+      }
+
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 180,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 18,
+          duration: 200,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: false,
+        }),
+      ]).start(() => {
+        setIsMounted(false);
+      });
     }
-  }, [isVisible]);
+  }, [isVisible, isMounted, fadeAnim, slideAnim]);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      const duration = event.duration ?? 250;
+      Animated.timing(keyboardOffset, {
+        toValue: event.endCoordinates.height,
+        duration,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, (event) => {
+      const duration = event?.duration ?? 220;
+      Animated.timing(keyboardOffset, {
+        toValue: 0,
+        duration,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardOffset]);
 
   const handleLogMeal = async () => {
     if (!mealInput.trim()) {
@@ -72,18 +136,23 @@ export default function BottomSheetMealLogger({
   };
 
   return (
-    <Modal visible={isVisible} transparent animationType="none">
-      <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+    <Modal visible={isMounted} animationType="none" transparent>
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.inner}
-          >
+          <View style={styles.inner}>
             {/* Header with close button */}
             <View style={styles.header}>
               <Text style={styles.title}>Log a Meal</Text>
               <Pressable onPress={onClose} hitSlop={8}>
-                <X size={24} color={colors.text} />
+                <X size={24} color={paperTheme.colors.onSurface} />
               </Pressable>
             </View>
 
@@ -95,7 +164,7 @@ export default function BottomSheetMealLogger({
                 ref={inputRef}
                 style={styles.input}
                 placeholder="grilled chicken with rice and broccoli"
-                placeholderTextColor={colors.muted}
+                placeholderTextColor={paperTheme.colors.onSurfaceVariant}
                 value={mealInput}
                 onChangeText={setMealInput}
                 multiline
@@ -103,13 +172,21 @@ export default function BottomSheetMealLogger({
                 maxLength={500}
               />
 
-              <Text style={styles.counter}>
-                {mealInput.length}/500
+              <Text style={styles.tipText}>
+                Tip: Be specific with ingredients and portions for better calorie estimates.
               </Text>
             </View>
 
             {/* Action buttons - above keyboard */}
-            <View style={styles.actions}>
+            <Animated.View
+              style={[
+                styles.actions,
+                {
+                  transform: [{ translateY: Animated.multiply(keyboardOffset, -1) }],
+                  paddingBottom: insets.bottom + 12,
+                },
+              ]}
+            >
               <Pressable
                 style={[styles.btnCancel]}
                 onPress={onClose}
@@ -125,13 +202,13 @@ export default function BottomSheetMealLogger({
                 onPress={handleLogMeal}
                 disabled={isLoading || !mealInput.trim()}
               >
-                <Send size={16} color="#fff" />
+                <Send size={16} color={paperTheme.colors.onPrimary} />
                 <Text style={styles.btnLogText}>
                   {isLoading ? 'Logging...' : 'Log'}
                 </Text>
               </Pressable>
-            </View>
-          </KeyboardAvoidingView>
+            </Animated.View>
+          </View>
         </SafeAreaView>
       </Animated.View>
     </Modal>
@@ -141,80 +218,82 @@ export default function BottomSheetMealLogger({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: paperTheme.colors.background,
   },
   safeArea: {
     flex: 1,
   },
   inner: {
     flex: 1,
-    display: 'flex',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    backgroundColor: paperTheme.colors.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 20,
+    paddingTop: 10,
+    paddingBottom: 14,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: colors.text,
-    letterSpacing: -0.5,
+    fontSize: 24,
+    lineHeight: 34,
+    fontWeight: '600',
+    color: paperTheme.colors.onSurface,
   },
   content: {
-    flex: 1,
-    justifyContent: 'center',
     paddingHorizontal: 20,
+    paddingTop: 4,
   },
   subtitle: {
-    color: colors.muted,
-    fontSize: 16,
-    fontWeight: '600',
+    color: paperTheme.colors.onSurfaceVariant,
+    fontSize: 13,
+    fontWeight: '500',
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   input: {
-    backgroundColor: '#FCFAF7',
+    backgroundColor: paperTheme.colors.surface,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.text,
-    fontSize: 18,
+    borderColor: paperTheme.colors.outline,
+    color: paperTheme.colors.onSurface,
+    fontSize: 16,
     paddingVertical: 18,
     paddingHorizontal: 18,
-    minHeight: 120,
+    minHeight: 140,
     maxHeight: 280,
-    textAlignVertical: 'center',
+    textAlignVertical: 'top',
     marginBottom: 12,
   },
-  counter: {
+  tipText: {
+    marginTop: 2,
+    color: paperTheme.colors.onSurfaceVariant,
     fontSize: 12,
-    color: colors.muted,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: '500',
+    textAlign: 'left',
   },
   actions: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    bottom: 0,
     flexDirection: 'row',
     gap: 10,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
   },
   btnCancel: {
     flex: 1,
     height: 50,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: paperTheme.colors.outline,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF7EF',
+    backgroundColor: paperTheme.colors.surfaceVariant,
   },
   btnCancelText: {
-    color: colors.text,
+    color: paperTheme.colors.onSurface,
     fontWeight: '700',
     fontSize: 16,
   },
@@ -222,7 +301,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
     borderRadius: 14,
-    backgroundColor: colors.primary,
+    backgroundColor: paperTheme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -232,7 +311,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   btnLogText: {
-    color: '#fff',
+    color: paperTheme.colors.onPrimary,
     fontWeight: '700',
     fontSize: 16,
   },

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
-import { colors } from '@/constants/uiTheme';
+import { paperTheme } from '@/constants/paperTheme';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -44,20 +44,20 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: paperTheme.colors.background },
   content: { padding: 20, paddingBottom: 100 },
-  title: { fontSize: 30, fontWeight: '900', color: colors.text, letterSpacing: -0.5 },
-  subtitle: { fontSize: 13, color: colors.muted, marginBottom: 14 },
-  card: { backgroundColor: '#fff', borderColor: colors.border, borderWidth: 1, borderRadius: 18, padding: 18, alignItems: 'center', marginBottom: 14, shadowColor: '#A89273', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
-  avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  avatarText: { color: '#fff', fontSize: 28, fontWeight: '800' },
-  name: { fontSize: 20, fontWeight: '800', color: colors.text },
-  email: { fontSize: 13, color: colors.muted, marginTop: 4 },
-  section: { backgroundColor: '#fff', borderColor: colors.border, borderWidth: 1, borderRadius: 18, padding: 16, gap: 10 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 },
-  item: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#FCFAF7', borderWidth: 1, borderColor: '#EDE4D8', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12 },
-  itemLabel: { color: colors.muted, fontSize: 13 },
-  itemValue: { color: colors.text, fontWeight: '700', fontSize: 13 },
-  logoutBtn: { marginTop: 14, height: 48, borderRadius: 14, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center' },
-  logoutText: { color: '#B91C1C', fontWeight: '700' },
+  title: { fontSize: 24, lineHeight: 34, fontWeight: '600', color: paperTheme.colors.onBackground },
+  subtitle: { fontSize: 13, fontWeight: '500', color: paperTheme.colors.onSurfaceVariant, marginBottom: 14 },
+  card: { backgroundColor: paperTheme.colors.elevation.level1, borderColor: paperTheme.colors.outline, borderWidth: 1, borderRadius: 18, padding: 18, alignItems: 'center', marginBottom: 14 },
+  avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: paperTheme.colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  avatarText: { color: paperTheme.colors.onPrimary, fontSize: 28, fontWeight: '800' },
+  name: { fontSize: 20, fontWeight: '800', color: paperTheme.colors.onSurface },
+  email: { fontSize: 13, color: paperTheme.colors.onSurfaceVariant, marginTop: 4 },
+  section: { backgroundColor: paperTheme.colors.elevation.level1, borderColor: paperTheme.colors.outline, borderWidth: 1, borderRadius: 18, padding: 16, gap: 10 },
+  sectionTitle: { fontSize: 20, lineHeight: 24, fontWeight: '600', color: paperTheme.colors.onSurface, marginBottom: 4 },
+  item: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: paperTheme.colors.surfaceVariant, borderWidth: 1, borderColor: paperTheme.colors.outline, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12 },
+  itemLabel: { color: paperTheme.colors.onSurfaceVariant, fontSize: 13 },
+  itemValue: { color: paperTheme.colors.onSurface, fontWeight: '700', fontSize: 13 },
+  logoutBtn: { marginTop: 14, height: 48, borderRadius: 14, backgroundColor: '#3A1F2A', borderWidth: 1, borderColor: '#5A3140', alignItems: 'center', justifyContent: 'center' },
+  logoutText: { color: '#FF9FB2', fontWeight: '700' },
 });

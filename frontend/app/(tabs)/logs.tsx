@@ -1,16 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Alert, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import apiService from '@/services/api';
 import { useFocusEffect } from '@react-navigation/native';
-import { Send, Calendar } from 'lucide-react-native';
+import { Calendar, Pencil } from 'lucide-react-native';
 import { MealHistory } from '@/types';
-import { colors } from '@/constants/uiTheme';
+import { paperTheme } from '@/constants/paperTheme';
 
 export default function LogsScreen() {
-  const [mealInput, setMealInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [history, setHistory] = useState<MealHistory[]>([]);
+  const [history, setHistory] = React.useState<MealHistory[]>([]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -27,24 +25,30 @@ export default function LogsScreen() {
     }
   };
 
-  const handleLogMeal = async () => {
-    if (!mealInput.trim()) {
-      Alert.alert('Error', 'Please enter a meal description');
-      return;
+  const getMealName = (meal: MealHistory) => {
+    const parsed = meal.items?.[0]?.parsed_food?.trim();
+    if (parsed) {
+      return parsed.charAt(0).toUpperCase() + parsed.slice(1);
     }
 
-    setIsLoading(true);
-    try {
-      const estimate = await apiService.logFoodText(mealInput);
-      const savedMeal = await apiService.saveMealHistory(estimate);
-      setHistory((prev) => [savedMeal, ...prev].slice(0, 30));
-      Alert.alert('Success', `Saved ${Math.round(savedMeal.total_calories)} kcal`);
-      setMealInput('');
-    } catch {
-      Alert.alert('Error', 'Could not log meal');
-    } finally {
-      setIsLoading(false);
+    const note = (meal.note || 'Meal').toString().trim();
+    const cleaned = note.replace(/^\s*\d+\s*(g|grams?)?\s*/i, '').trim();
+    const base = cleaned || note;
+    return base.charAt(0).toUpperCase() + base.slice(1);
+  };
+
+  const getMealDose = (meal: MealHistory) => {
+    const gramsFromItems = (meal.items || []).reduce(
+      (sum, item) => sum + (item.estimated_grams || 0),
+      0
+    );
+    if (gramsFromItems > 0) {
+      return `${Math.round(gramsFromItems)}g`;
     }
+
+    const note = (meal.note || '').toString();
+    const match = note.match(/(\d+)\s*(g|grams?)/i);
+    return match ? `${match[1]}g` : '';
   };
 
   return (
@@ -56,40 +60,29 @@ export default function LogsScreen() {
             <Text style={styles.subtitle}>Capture what you eat, instantly</Text>
           </View>
           <View style={styles.datePill}>
-            <Calendar size={14} color={colors.muted} />
+            <Calendar size={14} color={paperTheme.colors.onSurfaceVariant} />
             <Text style={styles.dateTxt}>Today</Text>
           </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Log a meal</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. chicken bowl with rice"
-              placeholderTextColor="#94A3B8"
-              value={mealInput}
-              onChangeText={setMealInput}
-              editable={!isLoading}
-              multiline
-              textAlignVertical="top"
-            />
-            <Pressable style={[styles.sendBtn, isLoading && styles.sendBtnDisabled]} onPress={handleLogMeal} disabled={isLoading}>
-              <Send size={18} color="#fff" />
-            </Pressable>
-          </View>
-          <Text style={styles.tip}>Tip: include portion sizes for better estimates.</Text>
-        </View>
-
-        <View style={styles.card}>
           <Text style={styles.cardTitle}>Meal History</Text>
           {history.length === 0 ? (
-            <Text style={styles.tip}>No saved meals yet.</Text>
+            <Text style={styles.tip}>No saved meals yet. Tap + to log your first one.</Text>
           ) : (
-            history.map((meal) => (
-              <View key={meal.id} style={styles.historyRow}>
+            history.map((meal, index) => (
+              <View key={meal.id} style={[styles.historyRow, index === history.length - 1 && styles.historyRowLast]}>
                 <View style={styles.historyTextWrap}>
-                  <Text style={styles.historyNote} numberOfLines={2}>{meal.note}</Text>
+                  <Text style={styles.historyNote} numberOfLines={2}>{getMealName(meal)}</Text>
+                  {!!getMealDose(meal) && <Text style={styles.historyGrams}>{getMealDose(meal)}</Text>}
+                </View>
+                <View style={styles.historyRight}>
+                  <View style={styles.calorieEditRow}>
+                    <Text style={styles.historyCalories}>{Math.round(meal.total_calories)} kcal</Text>
+                    <Pressable style={styles.editIconBtn}>
+                      <Pencil size={15} color={paperTheme.colors.onSurfaceVariant} />
+                    </Pressable>
+                  </View>
                   <Text style={styles.historyMeta}>
                     {new Date(meal.timestamp).toLocaleString([], {
                       month: 'short',
@@ -98,15 +91,6 @@ export default function LogsScreen() {
                       minute: '2-digit',
                     })}
                   </Text>
-                </View>
-                <View style={styles.historyRight}>
-                  <Text style={styles.historyCalories}>{Math.round(meal.total_calories)} kcal</Text>
-                  <Text style={styles.historyRange}>
-                    {Math.round(meal.total_calorie_range[0])}-{Math.round(meal.total_calorie_range[1])}
-                  </Text>
-                  <View style={styles.itemCountPill}>
-                    <Text style={styles.itemCountText}>{meal.items.length} items</Text>
-                  </View>
                 </View>
               </View>
             ))
@@ -118,27 +102,33 @@ export default function LogsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 20, paddingBottom: 100 },
+  root: { flex: 1, backgroundColor: paperTheme.colors.background },
+  content: { padding: 20, paddingBottom: 130 },
   headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
-  title: { color: colors.text, fontSize: 30, fontWeight: '900', letterSpacing: -0.5 },
-  subtitle: { color: colors.muted, fontSize: 13, marginTop: 2 },
-  datePill: { flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: '#FFF7EF', borderColor: '#EBDCC8', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, marginTop: 4 },
-  dateTxt: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-  card: { backgroundColor: '#fff', borderColor: colors.border, borderWidth: 1, borderRadius: 18, padding: 16, marginBottom: 12, shadowColor: '#A89273', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
-  cardTitle: { color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: 12 },
-  inputRow: { flexDirection: 'row', gap: 10 },
-  input: { flex: 1, backgroundColor: '#FCFAF7', borderRadius: 12, borderWidth: 1, borderColor: '#E8DDCF', paddingHorizontal: 12, paddingTop: 12, minHeight: 86, color: colors.text },
-  sendBtn: { width: 46, height: 46, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  sendBtnDisabled: { opacity: 0.6 },
-  tip: { marginTop: 10, color: colors.muted, fontSize: 12 },
-  historyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, marginTop: 12 },
+  title: { color: paperTheme.colors.onBackground, fontSize: 24, lineHeight: 34, fontWeight: '600' },
+  subtitle: { color: paperTheme.colors.onSurfaceVariant, fontSize: 13, fontWeight: '500', marginTop: 2 },
+  datePill: { flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: paperTheme.colors.surfaceVariant, borderColor: paperTheme.colors.outline, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, marginTop: 4 },
+  dateTxt: { color: paperTheme.colors.onSurfaceVariant, fontSize: 12, fontWeight: '600' },
+  card: { backgroundColor: 'transparent', padding: 0, marginBottom: 12 },
+  cardTitle: { color: paperTheme.colors.onSurface, fontSize: 20, lineHeight: 24, fontWeight: '600', marginBottom: 12 },
+  tip: { color: paperTheme.colors.onSurfaceVariant, fontSize: 12 },
+  historyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 14, borderTopWidth: 1, borderTopColor: paperTheme.colors.outline },
+  historyRowLast: { borderBottomWidth: 1, borderBottomColor: paperTheme.colors.outline },
   historyTextWrap: { flex: 1, marginRight: 10 },
-  historyNote: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  historyMeta: { color: colors.muted, fontSize: 12, marginTop: 4 },
-  historyRight: { alignItems: 'flex-end' },
-  historyCalories: { color: colors.secondary, fontWeight: '800', fontSize: 14 },
-  historyRange: { color: colors.muted, fontSize: 11, marginTop: 2 },
-  itemCountPill: { marginTop: 6, backgroundColor: colors.soft, borderWidth: 1, borderColor: '#F0DDC8', borderRadius: 999, paddingVertical: 2, paddingHorizontal: 8 },
-  itemCountText: { color: colors.primaryDark, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  historyNote: { color: paperTheme.colors.onSurface, fontSize: 20, lineHeight: 24, fontWeight: '600' },
+  historyGrams: { color: '#8E8E8E', fontSize: 13, marginTop: 4, fontWeight: '500' },
+  historyMeta: { color: paperTheme.colors.onSurfaceVariant, fontSize: 12, marginTop: 6 },
+  historyRight: { alignItems: 'flex-end', minWidth: 150 },
+  calorieEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  historyCalories: { color: paperTheme.colors.primary, fontWeight: '800', fontSize: 15 },
+  editIconBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: '#4A4A4A',
+    backgroundColor: '#171717',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

@@ -17,7 +17,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { colors } from '@/constants/uiTheme';
+import { paperTheme } from '@/constants/paperTheme';
 import { API_CONFIG } from '@/constants/config';
 
 type AuthMode = 'login' | 'signup';
@@ -105,13 +105,13 @@ export default function AuthScreen() {
     Animated.timing(modeFade, {
       toValue: 0,
       duration: 120,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start(() => {
       setMode(nextMode);
       Animated.timing(modeFade, {
         toValue: 1,
         duration: 180,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
 
       if (nextMode === 'signup' && isKeyboardVisible) {
@@ -329,34 +329,34 @@ export default function AuthScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: paperTheme.colors.background },
   content: { flexGrow: 1, justifyContent: 'center', padding: 22 },
   header: { alignItems: 'center', marginBottom: 20 },
-  brand: { fontSize: 34, fontWeight: '900', color: colors.text },
-  tagline: { color: colors.muted, fontSize: 13, marginTop: 4 },
-  card: { backgroundColor: '#fff', borderColor: colors.border, borderWidth: 1, borderRadius: 18, padding: 16 },
+  brand: { fontSize: 24, lineHeight: 34, fontWeight: '600', color: paperTheme.colors.onBackground },
+  tagline: { color: paperTheme.colors.onSurfaceVariant, fontSize: 13, fontWeight: '500', marginTop: 4 },
+  card: { backgroundColor: paperTheme.colors.elevation.level1, borderColor: paperTheme.colors.outline, borderWidth: 1, borderRadius: 18, padding: 16 },
   googleBtn: {
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#D7DDE8',
-    backgroundColor: '#FFFFFF',
+    borderColor: paperTheme.colors.outline,
+    backgroundColor: paperTheme.colors.surfaceVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
   },
   googleBtnDisabled: { opacity: 0.6 },
-  googleBtnText: { color: '#1F2937', fontWeight: '700', fontSize: 15 },
+  googleBtnText: { color: paperTheme.colors.onSurface, fontWeight: '700', fontSize: 15 },
   dividerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  divider: { flex: 1, height: 1, backgroundColor: '#E2E8F0' },
-  dividerText: { marginHorizontal: 10, color: colors.muted, fontSize: 12, fontWeight: '600' },
-  modeRow: { flexDirection: 'row', backgroundColor: '#EEF2F7', borderRadius: 12, padding: 4, marginBottom: 14 },
+  divider: { flex: 1, height: 1, backgroundColor: paperTheme.colors.outline },
+  dividerText: { marginHorizontal: 10, color: paperTheme.colors.onSurfaceVariant, fontSize: 12, fontWeight: '600' },
+  modeRow: { flexDirection: 'row', backgroundColor: paperTheme.colors.surfaceVariant, borderRadius: 12, padding: 4, marginBottom: 14 },
   modeBtn: { flex: 1, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  modeBtnActive: { backgroundColor: colors.primary, shadowColor: '#935034', shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  modeTxt: { fontWeight: '700', color: '#334155' },
-  modeTxtActive: { color: '#fff' },
-  input: { height: 46, borderRadius: 12, borderColor: colors.border, borderWidth: 1, paddingHorizontal: 12, backgroundColor: '#F8FAFC', color: colors.text, marginBottom: 10 },
-  submitBtn: { marginTop: 8, height: 46, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  submitTxt: { color: '#fff', fontWeight: '800', fontSize: 15 },
-  errorText: { marginTop: 10, color: colors.danger, fontSize: 13, textAlign: 'center' },
+  modeBtnActive: { backgroundColor: paperTheme.colors.primary, elevation: 2 },
+  modeTxt: { fontWeight: '700', color: paperTheme.colors.onSurfaceVariant },
+  modeTxtActive: { color: paperTheme.colors.onPrimary },
+  input: { height: 46, borderRadius: 12, borderColor: paperTheme.colors.outline, borderWidth: 1, paddingHorizontal: 12, backgroundColor: paperTheme.colors.surfaceVariant, color: paperTheme.colors.onSurface, marginBottom: 10 },
+  submitBtn: { marginTop: 8, height: 46, borderRadius: 12, backgroundColor: paperTheme.colors.primary, alignItems: 'center', justifyContent: 'center' },
+  submitTxt: { color: paperTheme.colors.onPrimary, fontWeight: '800', fontSize: 15 },
+  errorText: { marginTop: 10, color: paperTheme.colors.error, fontSize: 13, textAlign: 'center' },
 });
