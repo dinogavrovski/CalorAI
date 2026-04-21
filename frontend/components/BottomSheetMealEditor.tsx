@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Modal,
   View,
@@ -11,30 +11,40 @@ import {
   Easing,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { X, Send } from 'lucide-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { paperTheme } from '@/constants/paperTheme';
 import apiService from '@/services/api';
-import { TextLogResponse, TextLogItem } from '@/types';
-import { Alert } from 'react-native';
+import { paperTheme } from '@/constants/paperTheme';
+import { MealHistory, TextLogItem, TextLogResponse } from '@/types';
 
-interface BottomSheetMealLoggerProps {
+interface BottomSheetMealEditorProps {
   isVisible: boolean;
+  meal: MealHistory | null;
   onClose: () => void;
-  onSuccess: () => void;
+  onSaved: () => void;
 }
 
-export default function BottomSheetMealLogger({
+function toTextLogResponse(meal: MealHistory): TextLogResponse {
+  return {
+    note: meal.note,
+    items: meal.items,
+    total_calories: meal.total_calories,
+    total_calorie_range: meal.total_calorie_range,
+  };
+}
+
+export default function BottomSheetMealEditor({
   isVisible,
+  meal,
   onClose,
-  onSuccess,
-}: BottomSheetMealLoggerProps) {
+  onSaved,
+}: BottomSheetMealEditorProps) {
   const insets = useSafeAreaInsets();
   const [mealInput, setMealInput] = useState('');
   const [analyzeResult, setAnalyzeResult] = useState<TextLogResponse | null>(null);
   const [adjustments, setAdjustments] = useState<Record<number, number>>({});
-  const [analyzeDurationMs, setAnalyzeDurationMs] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(isVisible);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -45,10 +55,9 @@ export default function BottomSheetMealLogger({
   useEffect(() => {
     if (isVisible) {
       setIsMounted(true);
-      setMealInput('');
-      setAnalyzeResult(null);
+      setMealInput(meal?.note ?? '');
+      setAnalyzeResult(meal ? toTextLogResponse(meal) : null);
       setAdjustments({});
-      setAnalyzeDurationMs(null);
       fadeAnim.setValue(0);
       slideAnim.setValue(28);
 
@@ -90,7 +99,7 @@ export default function BottomSheetMealLogger({
         setIsMounted(false);
       });
     }
-  }, [isVisible, isMounted, fadeAnim, slideAnim]);
+  }, [isVisible, isMounted, fadeAnim, slideAnim, meal]);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -151,20 +160,17 @@ export default function BottomSheetMealLogger({
       .join(', ');
   };
 
-  const handleAnalyzeMeal = async () => {
+  const handleAnalyze = async () => {
     if (!mealInput.trim()) {
       Alert.alert('Error', 'Please enter a meal description');
       return;
     }
 
     setIsLoading(true);
-    const startedAt = Date.now();
-
     try {
       const estimate = await apiService.logFoodText(mealInput.trim());
       setAnalyzeResult(estimate);
       setAdjustments({});
-      setAnalyzeDurationMs(Date.now() - startedAt);
     } catch {
       Alert.alert('Error', 'Could not analyze meal');
     } finally {
@@ -172,8 +178,8 @@ export default function BottomSheetMealLogger({
     }
   };
 
-  const handleSaveMeal = async () => {
-    if (!analyzeResult) {
+  const handleSave = async () => {
+    if (!meal || !analyzeResult) {
       return;
     }
 
@@ -181,16 +187,19 @@ export default function BottomSheetMealLogger({
     try {
       const hasPortionEdits = Object.values(adjustments).some((multiplier) => multiplier !== 1);
       const noteToSave = hasPortionEdits ? buildAdjustedNote(analyzeResult) : mealInput.trim();
-      const savedMeal = await apiService.saveMealHistory(noteToSave);
-      Alert.alert('Success', `Saved ${Math.round(savedMeal.total_calories)} kcal`);
-      setMealInput('');
-      setAnalyzeResult(null);
-      setAdjustments({});
-      setAnalyzeDurationMs(null);
+
+      if (!noteToSave) {
+        Alert.alert('Error', 'Please enter a meal description');
+        setIsLoading(false);
+        return;
+      }
+
+      await apiService.updateMealHistory(meal.id, noteToSave);
+      Alert.alert('Updated', 'Meal was updated');
       onClose();
-      onSuccess();
+      onSaved();
     } catch {
-      Alert.alert('Error', 'Could not save meal');
+      Alert.alert('Error', 'Could not update meal');
     } finally {
       setIsLoading(false);
     }
@@ -203,10 +212,14 @@ export default function BottomSheetMealLogger({
     }));
   };
 
-  const handleBackToEdit = () => {
-    setAnalyzeResult(null);
-    setAdjustments({});
-    setAnalyzeDurationMs(null);
+  const handleNoteChange = (text: string) => {
+    setMealInput(text);
+
+    if (analyzeResult) {
+      // Any text edit invalidates the current estimate; require fresh analyze.
+      setAnalyzeResult(null);
+      setAdjustments({});
+    }
   };
 
   return (
@@ -222,9 +235,8 @@ export default function BottomSheetMealLogger({
       >
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
           <View style={styles.inner}>
-            {/* Header with close button */}
             <View style={styles.header}>
-              <Text style={styles.title}>Log a Meal</Text>
+              <Text style={styles.title}>Edit Meal</Text>
               <Pressable onPress={onClose} hitSlop={8}>
                 <X size={24} color={paperTheme.colors.onSurface} />
               </Pressable>
@@ -235,39 +247,27 @@ export default function BottomSheetMealLogger({
               contentContainerStyle={styles.contentBody}
               keyboardShouldPersistTaps="handled"
             >
-              {!analyzeResult ? (
-                <>
-                  <Text style={styles.subtitle}>What did you eat?</Text>
+              <Text style={styles.subtitle}>Update your note and review before saving</Text>
 
-                  <TextInput
-                    ref={inputRef}
-                    style={styles.input}
-                    placeholder="grilled chicken with rice and broccoli"
-                    placeholderTextColor={paperTheme.colors.onSurfaceVariant}
-                    value={mealInput}
-                    onChangeText={setMealInput}
-                    multiline
-                    editable={!isLoading}
-                    maxLength={500}
-                  />
+              <TextInput
+                ref={inputRef}
+                style={styles.input}
+                placeholder="250g chicken and 1 cup rice"
+                placeholderTextColor={paperTheme.colors.onSurfaceVariant}
+                value={mealInput}
+                onChangeText={handleNoteChange}
+                multiline
+                editable={!isLoading}
+                maxLength={500}
+              />
 
-                  <Text style={styles.tipText}>
-                    Tip: Be specific with ingredients and portions for better calorie estimates.
-                  </Text>
-                </>
-              ) : (
+              {analyzeResult ? (
                 <>
-                  <Text style={styles.subtitle}>Review estimate before saving</Text>
                   <View style={styles.summaryCard}>
                     <Text style={styles.summaryValue}>{getAdjustedTotalCalories()} kcal</Text>
                     <Text style={styles.summaryLabel}>
                       Range {Math.round(analyzeResult.total_calorie_range[0])}-{Math.round(analyzeResult.total_calorie_range[1])} kcal
                     </Text>
-                    {analyzeDurationMs !== null && (
-                      <Text style={styles.latencyLabel}>
-                        Result in {(analyzeDurationMs / 1000).toFixed(2)}s {analyzeDurationMs <= 2000 ? 'target met' : 'above target'}
-                      </Text>
-                    )}
                   </View>
 
                   {analyzeResult.items.map((item, index) => (
@@ -280,9 +280,7 @@ export default function BottomSheetMealLogger({
                         Nutrition source: {item.nutrition_source}
                         {item.matched_description ? ` (${item.matched_description})` : ''}
                       </Text>
-                      <Text style={styles.itemCalories}>
-                        {getAdjustedCalories(item, index)} kcal
-                      </Text>
+                      <Text style={styles.itemCalories}>{getAdjustedCalories(item, index)} kcal</Text>
 
                       <View style={styles.adjustRow}>
                         <Text style={styles.adjustLabel}>Portion</Text>
@@ -307,10 +305,11 @@ export default function BottomSheetMealLogger({
                     </View>
                   ))}
                 </>
+              ) : (
+                <Text style={styles.tipText}>Tap Analyze after edits to confirm updated calories before saving.</Text>
               )}
             </ScrollView>
 
-            {/* Action buttons - above keyboard */}
             <Animated.View
               style={[
                 styles.actions,
@@ -321,30 +320,19 @@ export default function BottomSheetMealLogger({
               ]}
             >
               <Pressable
-                style={[styles.btnCancel]}
-                onPress={analyzeResult ? handleBackToEdit : onClose}
-                disabled={isLoading}
+                style={styles.btnCancel}
+                onPress={handleAnalyze}
+                disabled={isLoading || !mealInput.trim()}
               >
-                <Text style={styles.btnCancelText}>{analyzeResult ? 'Back' : 'Cancel'}</Text>
+                <Text style={styles.btnCancelText}>Analyze</Text>
               </Pressable>
               <Pressable
-                style={[
-                  styles.btnLog,
-                  isLoading && styles.btnLogDisabled,
-                ]}
-                onPress={analyzeResult ? handleSaveMeal : handleAnalyzeMeal}
-                disabled={isLoading || (!analyzeResult && !mealInput.trim())}
+                style={[styles.btnLog, (isLoading || !analyzeResult) && styles.btnLogDisabled]}
+                onPress={handleSave}
+                disabled={isLoading || !analyzeResult}
               >
                 <Send size={16} color={paperTheme.colors.onPrimary} />
-                <Text style={styles.btnLogText}>
-                  {isLoading
-                    ? analyzeResult
-                      ? 'Saving...'
-                      : 'Analyzing...'
-                    : analyzeResult
-                      ? 'Save meal'
-                      : 'Analyze'}
-                </Text>
+                <Text style={styles.btnLogText}>{isLoading ? 'Saving...' : 'Save changes'}</Text>
               </Pressable>
             </Animated.View>
           </View>
@@ -393,8 +381,7 @@ const styles = StyleSheet.create({
     color: paperTheme.colors.onSurfaceVariant,
     fontSize: 13,
     fontWeight: '500',
-    marginBottom: 20,
-    textAlign: 'left',
+    marginBottom: 12,
   },
   input: {
     backgroundColor: paperTheme.colors.surface,
@@ -403,19 +390,17 @@ const styles = StyleSheet.create({
     borderColor: paperTheme.colors.outline,
     color: paperTheme.colors.onSurface,
     fontSize: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 18,
-    minHeight: 140,
-    maxHeight: 280,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    minHeight: 96,
+    maxHeight: 220,
     textAlignVertical: 'top',
     marginBottom: 12,
   },
   tipText: {
-    marginTop: 2,
     color: paperTheme.colors.onSurfaceVariant,
     fontSize: 12,
     fontWeight: '500',
-    textAlign: 'left',
   },
   summaryCard: {
     borderWidth: 1,
@@ -434,12 +419,6 @@ const styles = StyleSheet.create({
     color: paperTheme.colors.onSurfaceVariant,
     fontSize: 12,
     marginTop: 4,
-  },
-  latencyLabel: {
-    color: paperTheme.colors.primary,
-    fontSize: 12,
-    marginTop: 6,
-    fontWeight: '600',
   },
   itemCard: {
     borderWidth: 1,

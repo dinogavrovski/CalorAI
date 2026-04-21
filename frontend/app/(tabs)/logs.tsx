@@ -3,12 +3,14 @@ import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import apiService from '@/services/api';
 import { useFocusEffect } from '@react-navigation/native';
-import { Calendar, Pencil } from 'lucide-react-native';
+import { Pencil } from 'lucide-react-native';
 import { MealHistory } from '@/types';
 import { paperTheme } from '@/constants/paperTheme';
+import BottomSheetMealEditor from '@/components/BottomSheetMealEditor';
 
 export default function LogsScreen() {
   const [history, setHistory] = React.useState<MealHistory[]>([]);
+  const [editingMeal, setEditingMeal] = React.useState<MealHistory | null>(null);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -26,15 +28,22 @@ export default function LogsScreen() {
   };
 
   const getMealName = (meal: MealHistory) => {
-    const parsed = meal.items?.[0]?.parsed_food?.trim();
-    if (parsed) {
-      return parsed.charAt(0).toUpperCase() + parsed.slice(1);
+    const note = (meal.note || 'Meal').toString().trim();
+    if (note) {
+      return note.charAt(0).toUpperCase() + note.slice(1);
     }
 
-    const note = (meal.note || 'Meal').toString().trim();
-    const cleaned = note.replace(/^\s*\d+\s*(g|grams?)?\s*/i, '').trim();
-    const base = cleaned || note;
-    return base.charAt(0).toUpperCase() + base.slice(1);
+    const parsedItems = (meal.items || [])
+      .map((item) => item.parsed_food?.trim())
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(', ');
+
+    if (parsedItems) {
+      return parsedItems.charAt(0).toUpperCase() + parsedItems.slice(1);
+    }
+
+    return 'Meal';
   };
 
   const getMealDose = (meal: MealHistory) => {
@@ -54,17 +63,6 @@ export default function LogsScreen() {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.headRow}>
-          <View>
-            <Text style={styles.title}>Food Logs</Text>
-            <Text style={styles.subtitle}>Capture what you eat, instantly</Text>
-          </View>
-          <View style={styles.datePill}>
-            <Calendar size={14} color={paperTheme.colors.onSurfaceVariant} />
-            <Text style={styles.dateTxt}>Today</Text>
-          </View>
-        </View>
-
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Meal History</Text>
           {history.length === 0 ? (
@@ -79,7 +77,7 @@ export default function LogsScreen() {
                 <View style={styles.historyRight}>
                   <View style={styles.calorieEditRow}>
                     <Text style={styles.historyCalories}>{Math.round(meal.total_calories)} kcal</Text>
-                    <Pressable style={styles.editIconBtn}>
+                    <Pressable style={styles.editIconBtn} onPress={() => setEditingMeal(meal)}>
                       <Pencil size={15} color={paperTheme.colors.onSurfaceVariant} />
                     </Pressable>
                   </View>
@@ -97,6 +95,16 @@ export default function LogsScreen() {
           )}
         </View>
       </ScrollView>
+
+      <BottomSheetMealEditor
+        isVisible={!!editingMeal}
+        meal={editingMeal}
+        onClose={() => setEditingMeal(null)}
+        onSaved={() => {
+          setEditingMeal(null);
+          loadHistory();
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -104,11 +112,6 @@ export default function LogsScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: paperTheme.colors.background },
   content: { padding: 20, paddingBottom: 130 },
-  headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
-  title: { color: paperTheme.colors.onBackground, fontSize: 24, lineHeight: 34, fontWeight: '600' },
-  subtitle: { color: paperTheme.colors.onSurfaceVariant, fontSize: 13, fontWeight: '500', marginTop: 2 },
-  datePill: { flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: paperTheme.colors.surfaceVariant, borderColor: paperTheme.colors.outline, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, marginTop: 4 },
-  dateTxt: { color: paperTheme.colors.onSurfaceVariant, fontSize: 12, fontWeight: '600' },
   card: { backgroundColor: 'transparent', padding: 0, marginBottom: 12 },
   cardTitle: { color: paperTheme.colors.onSurface, fontSize: 20, lineHeight: 24, fontWeight: '600', marginBottom: 12 },
   tip: { color: paperTheme.colors.onSurfaceVariant, fontSize: 12 },

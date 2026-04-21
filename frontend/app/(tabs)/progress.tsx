@@ -23,9 +23,6 @@ export default function ProgressScreen() {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Progress</Text>
-        <Text style={styles.subtitle}>Momentum over perfection</Text>
-
         <View style={styles.streakCard}>
           <Text style={styles.streakLabel}>Current Streak</Text>
           <Text style={styles.streakNumber}>{streak} days</Text>
@@ -58,8 +55,6 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: paperTheme.colors.background },
   content: { padding: 20, paddingBottom: 100 },
-  title: { fontSize: 24, lineHeight: 34, fontWeight: '600', color: paperTheme.colors.onBackground },
-  subtitle: { fontSize: 13, fontWeight: '500', color: paperTheme.colors.onSurfaceVariant, marginBottom: 14 },
   streakCard: { backgroundColor: paperTheme.colors.elevation.level1, borderColor: paperTheme.colors.outline, borderWidth: 1, borderRadius: 18, padding: 16, marginBottom: 14 },
   streakLabel: { color: paperTheme.colors.onSurfaceVariant, fontWeight: '700', fontSize: 12 },
   streakNumber: { color: paperTheme.colors.onSurface, fontWeight: '800', fontSize: 28, marginTop: 4 },

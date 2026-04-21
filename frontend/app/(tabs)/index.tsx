@@ -272,15 +272,22 @@ export default function HomeScreen() {
   };
 
   const getMealName = (meal: any) => {
-    const parsed = meal?.items?.[0]?.parsed_food?.trim();
-    if (parsed) {
-      return parsed.charAt(0).toUpperCase() + parsed.slice(1);
+    const note = (meal?.note || 'Meal').toString().trim();
+    if (note) {
+      return note.charAt(0).toUpperCase() + note.slice(1);
     }
 
-    const note = (meal?.note || 'Meal').toString().trim();
-    const cleaned = note.replace(/^\s*\d+\s*(g|grams?)?\s*/i, '').trim();
-    const base = cleaned || note;
-    return base.charAt(0).toUpperCase() + base.slice(1);
+    const parsedItems = (meal?.items || [])
+      .map((item: any) => item?.parsed_food?.trim())
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(', ');
+
+    if (parsedItems) {
+      return parsedItems.charAt(0).toUpperCase() + parsedItems.slice(1);
+    }
+
+    return 'Meal';
   };
 
   const getMealDose = (meal: any) => {
@@ -322,7 +329,7 @@ export default function HomeScreen() {
               0
             </Chip>
 
-            <Pressable style={styles.profileBtn} onPress={() => router.push('/(tabs)/profile')}>
+            <Pressable style={styles.profileBtn} onPress={() => router.push('/profile')}>
               <User size={20} color="#DCE0EF" />
             </Pressable>
           </View>

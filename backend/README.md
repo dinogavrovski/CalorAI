@@ -14,6 +14,13 @@ For Google sign-in, also set:
 - `GOOGLE_WEB_CLIENT_ID`
 - `GOOGLE_ANDROID_CLIENT_ID`
 
+For AI-first text calorie estimation with Groq, set:
+
+- `GROQ_API_KEY`
+- Optional: `GROQ_MODEL` (default: `llama-3.1-8b-instant`)
+
+Groq is the only active estimation engine right now. If it is unavailable or quota-limited, the API returns a 502 error.
+
 ## 2) Start API
 From the repository root:
 

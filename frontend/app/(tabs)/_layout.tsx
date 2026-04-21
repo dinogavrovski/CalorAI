@@ -1,6 +1,6 @@
 import { withLayoutContext } from 'expo-router';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { Home, List, TrendingUp, User } from 'lucide-react-native';
+import { Home, List, TrendingUp } from 'lucide-react-native';
 import { Platform, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,7 +26,7 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarPosition: 'bottom',
           swipeEnabled: true,
-          animationEnabled: true,
+          animationEnabled: false,
           lazy: true,
           sceneStyle: {
             backgroundColor: paperTheme.colors.background,
@@ -95,19 +95,6 @@ export default function TabsLayout() {
             title: 'Progress',
             tabBarIcon: ({ color, size }) => (
               <TrendingUp color={color} size={size} />
-            ),
-          }}
-        />
-        <SwipeTabs.Screen
-          name="profile"
-          options={{
-            title: 'Profile',
-            href: null,
-            tabBarIconStyle: {
-              marginTop: 2,
-            },
-            tabBarIcon: ({ color, size }) => (
-              <User color={color} size={size} />
             ),
           }}
         />

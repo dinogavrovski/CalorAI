@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.dependencies.auth import get_current_user
 from app.models.meal_log import MealLog
-from app.schemas.text_log import TextLogResponse
+from app.schemas.text_log import TextLogRequest
 from app.schemas.user import UserResponse
+from app.services.text_calorie_estimator import estimate_from_text_note
 
 
 router = APIRouter(prefix="/user", tags=["User"])
@@ -26,12 +27,6 @@ def _serialize_meal_log(log: MealLog) -> dict:
     }
 
 
-def _dump_text_log_item(item) -> dict:
-    if hasattr(item, "model_dump"):
-        return item.model_dump()
-    return item.dict()
-
-
 @router.get("/me", response_model=UserResponse)
 def me(current_user=Depends(get_current_user)):
     return current_user
@@ -39,17 +34,22 @@ def me(current_user=Depends(get_current_user)):
 
 @router.post("/meal-history")
 def save_meal_history(
-    payload: TextLogResponse,
+    payload: TextLogRequest,
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    low, high = payload.total_calorie_range
+    # Never trust client-provided nutrition totals; recompute on the server.
+    try:
+        estimate = estimate_from_text_note(payload.note)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    low, high = estimate["total_calorie_range"]
 
     meal_log = MealLog(
         user_id=current_user.id,
-        note=payload.note,
-        items_json=[_dump_text_log_item(item) for item in payload.items],
-        total_calories=float(payload.total_calories),
+        note=estimate["note"],
+        items_json=estimate["items"],
+        total_calories=float(estimate["total_calories"]),
         total_calorie_low=float(low),
         total_calorie_high=float(high),
     )
@@ -75,3 +75,38 @@ def get_meal_history(
     )
 
     return [_serialize_meal_log(log) for log in logs]
+
+
+@router.put("/meal-history/{meal_id}")
+def update_meal_history(
+    meal_id: int,
+    payload: TextLogRequest,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    meal_log = (
+        db.query(MealLog)
+        .filter(MealLog.id == meal_id, MealLog.user_id == current_user.id)
+        .first()
+    )
+
+    if meal_log is None:
+        raise HTTPException(status_code=404, detail="Meal not found")
+
+    # Never trust client-side nutrition values when editing; recompute on server.
+    try:
+        estimate = estimate_from_text_note(payload.note)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    low, high = estimate["total_calorie_range"]
+
+    meal_log.note = estimate["note"]
+    meal_log.items_json = estimate["items"]
+    meal_log.total_calories = float(estimate["total_calories"])
+    meal_log.total_calorie_low = float(low)
+    meal_log.total_calorie_high = float(high)
+
+    db.commit()
+    db.refresh(meal_log)
+
+    return _serialize_meal_log(meal_log)

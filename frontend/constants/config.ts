@@ -12,6 +12,7 @@ export const API_CONFIG = {
       LOGIN: '/auth/login',
       GOOGLE: '/auth/google',
       REFRESH: '/auth/refresh',
+      LOGOUT: '/auth/logout',
     },
     AI: {
       LOG_TEXT: '/ai/log-text',

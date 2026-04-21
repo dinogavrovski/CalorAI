@@ -1,12 +1,15 @@
 from pathlib import Path
+import os
+
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from sqlalchemy import text
 from app.api.routes import ai, auth, user as user_router
 from app.db.database import engine
 from app.db.base import Base
-from app.models import meal_log, user  # noqa: F401
+from app.models import meal_log, refresh_session, user  # noqa: F401
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(dotenv_path=PROJECT_ROOT / ".env")
@@ -35,6 +38,39 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(user_router.router)
 app.include_router(ai.router)
+
+
+def _visible_swagger_paths() -> set[str]:
+    raw_paths = os.getenv(
+        "SWAGGER_VISIBLE_PATHS",
+        "/ai/log-text,/user/meal-history,/user/meal-history/{meal_id}",
+    )
+    return {path.strip() for path in raw_paths.split(",") if path.strip()}
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    schema = get_openapi(
+        title=app.title,
+        version="1.0.0",
+        description="AI-first calorie logging API",
+        routes=app.routes,
+    )
+
+    allowed_paths = _visible_swagger_paths()
+    schema["paths"] = {
+        path: methods
+        for path, methods in schema.get("paths", {}).items()
+        if path in allowed_paths
+    }
+
+    app.openapi_schema = schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 @app.get("/")
 def root():

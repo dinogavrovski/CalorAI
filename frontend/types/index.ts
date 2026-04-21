@@ -27,6 +27,8 @@ export interface User {
 
 export interface AuthResponse {
   access_token: string;
+  refresh_token: string;
+  access_token_expires_in: number;
   token_type: string;
   user: User;
 }
