@@ -49,25 +49,15 @@ fun ProfileScreen(
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Header row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Profile",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = OnSurface
-                )
-            )
+            Text("Profile", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = OnSurface))
             IconButton(
                 onClick = { viewModel.toggleEdit() },
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(if (uiState.isEditing) GreenContainer else Surface2)
-                    .size(40.dp)
+                modifier = Modifier.clip(CircleShape).background(if (uiState.isEditing) GreenContainer else Surface2).size(40.dp)
             ) {
                 Icon(
                     if (uiState.isEditing) Icons.Default.Close else Icons.Default.Edit,
@@ -80,7 +70,6 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Avatar + name hero
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(28.dp),
@@ -88,66 +77,30 @@ fun ProfileScreen(
             elevation = CardDefaults.cardElevation(0.dp)
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(Green400.copy(alpha = 0.7f), Green300.copy(alpha = 0.3f))
-                        )
-                    )
+                modifier = Modifier.fillMaxWidth().height(8.dp).background(
+                    Brush.horizontalGradient(listOf(Green400.copy(alpha = 0.7f), Green300.copy(alpha = 0.3f)))
+                )
             )
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Avatar initials
+            Column(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                val initials = uiState.profile?.email?.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
                 Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(CircleShape)
-                        .background(GreenContainer),
+                    modifier = Modifier.size(72.dp).clip(CircleShape).background(GreenContainer),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = uiState.profile?.name
-                            ?.split(" ")
-                            ?.mapNotNull { it.firstOrNull()?.uppercase() }
-                            ?.take(2)
-                            ?.joinToString("") ?: "?",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            color = Green400,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 28.sp
-                        )
-                    )
+                    Text(initials, style = MaterialTheme.typography.titleLarge.copy(color = Green400, fontWeight = FontWeight.Bold, fontSize = 28.sp))
                 }
-
                 Spacer(modifier = Modifier.height(12.dp))
-
                 if (uiState.isLoading) {
                     CircularProgressIndicator(color = Green400, modifier = Modifier.size(24.dp))
                 } else {
-                    Text(
-                        text = uiState.profile?.name ?: "—",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = OnSurface
-                        )
-                    )
-                    Text(
-                        text = uiState.profile?.email ?: "—",
-                        style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
-                    )
+                    Text(uiState.profile?.email?.substringBefore("@") ?: "—", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = OnSurface))
+                    Text(uiState.profile?.email ?: "—", style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant))
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Editable fields / info cards
         if (uiState.isEditing) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -155,84 +108,37 @@ fun ProfileScreen(
                 colors = CardDefaults.cardColors(containerColor = Surface1),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "Edit Profile",
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            color = OnSurface,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    )
-
-                    OutlinedTextField(
-                        value = uiState.editName,
-                        onValueChange = viewModel::updateName,
-                        label = { Text("Name") },
-                        leadingIcon = {
-                            Icon(Icons.Default.Person, contentDescription = null, tint = OnSurfaceVariant)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Green400,
-                            unfocusedBorderColor = Surface3,
-                            focusedLabelColor = Green400,
-                            unfocusedLabelColor = OnSurfaceVariant,
-                            cursorColor = Green400,
-                            focusedTextColor = OnSurface,
-                            unfocusedTextColor = OnSurface,
-                            focusedContainerColor = Surface2,
-                            unfocusedContainerColor = Surface1
-                        ),
-                        singleLine = true
-                    )
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("Edit Profile", style = MaterialTheme.typography.titleSmall.copy(color = OnSurface, fontWeight = FontWeight.SemiBold))
 
                     OutlinedTextField(
                         value = uiState.editCalorieGoal,
                         onValueChange = viewModel::updateCalorieGoal,
                         label = { Text("Daily Calorie Goal") },
-                        leadingIcon = {
-                            Icon(Icons.Default.LocalFireDepartment, contentDescription = null, tint = OnSurfaceVariant)
-                        },
+                        leadingIcon = { Icon(Icons.Default.LocalFireDepartment, contentDescription = null, tint = OnSurfaceVariant) },
                         suffix = { Text("kcal", color = OnSurfaceVariant) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Green400,
-                            unfocusedBorderColor = Surface3,
-                            focusedLabelColor = Green400,
-                            unfocusedLabelColor = OnSurfaceVariant,
-                            cursorColor = Green400,
-                            focusedTextColor = OnSurface,
-                            unfocusedTextColor = OnSurface,
-                            focusedContainerColor = Surface2,
-                            unfocusedContainerColor = Surface1
+                            focusedBorderColor = Green400, unfocusedBorderColor = Surface3,
+                            focusedLabelColor = Green400, unfocusedLabelColor = OnSurfaceVariant,
+                            cursorColor = Green400, focusedTextColor = OnSurface, unfocusedTextColor = OnSurface,
+                            focusedContainerColor = Surface2, unfocusedContainerColor = Surface1
                         ),
                         singleLine = true
                     )
 
                     AnimatedVisibility(visible = uiState.errorMessage != null) {
-                        Text(
-                            uiState.errorMessage ?: "",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error)
-                        )
+                        Text(uiState.errorMessage ?: "", style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error))
                     }
 
                     Button(
                         onClick = { viewModel.saveProfile() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
                         shape = RoundedCornerShape(14.dp),
                         enabled = !uiState.isSaving,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Green400,
-                            contentColor = Color(0xFF003314)
-                        )
+                        colors = ButtonDefaults.buttonColors(containerColor = Green400, contentColor = Color(0xFF003314))
                     ) {
                         if (uiState.isSaving) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color(0xFF003314), strokeWidth = 2.dp)
@@ -243,7 +149,6 @@ fun ProfileScreen(
                 }
             }
         } else {
-            // Info display
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
@@ -251,71 +156,35 @@ fun ProfileScreen(
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
                 Column(modifier = Modifier.padding(4.dp)) {
-                    ProfileInfoRow(
-                        icon = Icons.Default.Email,
-                        label = "Email",
-                        value = uiState.profile?.email ?: "—"
-                    )
+                    ProfileInfoRow(icon = Icons.Default.Email, label = "Email", value = uiState.profile?.email ?: "—")
                     HorizontalDivider(color = Surface3, modifier = Modifier.padding(horizontal = 16.dp))
-                    ProfileInfoRow(
-                        icon = Icons.Default.LocalFireDepartment,
-                        label = "Daily Goal",
-                        value = "${uiState.profile?.calorieGoal ?: 2000} kcal"
-                    )
+                    ProfileInfoRow(icon = Icons.Default.LocalFireDepartment, label = "Daily Goal", value = "${uiState.profile?.calorieGoal ?: 2000} kcal")
                 }
             }
         }
 
-        // Success snackbar
         AnimatedVisibility(visible = uiState.successMessage != null) {
             Spacer(modifier = Modifier.height(12.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = GreenContainer)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = GreenContainer)) {
+                Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Check, contentDescription = null, tint = Green400, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        uiState.successMessage ?: "",
-                        style = MaterialTheme.typography.bodyMedium.copy(color = Green300)
-                    )
+                    Text(uiState.successMessage ?: "", style = MaterialTheme.typography.bodyMedium.copy(color = Green300))
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Logout button
         OutlinedButton(
-            onClick = {
-                viewModel.logout()
-                onLogout()
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
+            onClick = { viewModel.logout(); onLogout() },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(14.dp),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
         ) {
-            Icon(
-                Icons.Default.Logout,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(18.dp)
-            )
+            Icon(Icons.Default.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                "Sign Out",
-                style = MaterialTheme.typography.labelLarge.copy(
-                    color = MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.SemiBold
-                )
-            )
+            Text("Sign Out", style = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold))
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -324,26 +193,12 @@ fun ProfileScreen(
 
 @Composable
 private fun ProfileInfoRow(icon: ImageVector, label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = Green400, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(14.dp))
         Column {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = OnSurface,
-                    fontWeight = FontWeight.Medium
-                )
-            )
+            Text(label, style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant))
+            Text(value, style = MaterialTheme.typography.bodyMedium.copy(color = OnSurface, fontWeight = FontWeight.Medium))
         }
     }
 }

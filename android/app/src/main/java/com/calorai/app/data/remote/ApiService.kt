@@ -16,22 +16,22 @@ interface ApiService {
 
     // ── User ──────────────────────────────────────────────────────────────────
 
-    @GET("users/me")
+    @GET("user/me")
     suspend fun getProfile(): Response<UserProfile>
 
-    @PATCH("users/me")
+    @PATCH("user/me")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<UserProfile>
 
     // ── AI ────────────────────────────────────────────────────────────────────
 
-    @POST("ai/estimate")
+    @POST("ai/log-text")
     suspend fun estimateMeal(@Body request: EstimateRequest): Response<EstimateResponse>
 
     // ── Meals ─────────────────────────────────────────────────────────────────
 
-    @POST("meals/log")
+    @POST("user/meal-history")
     suspend fun logMeal(@Body request: LogMealRequest): Response<MealLog>
 
-    @GET("meals/history")
-    suspend fun getMealHistory(): Response<MealHistoryResponse>
+    @GET("user/meal-history")
+    suspend fun getMealHistory(): Response<List<MealLog>>
 }

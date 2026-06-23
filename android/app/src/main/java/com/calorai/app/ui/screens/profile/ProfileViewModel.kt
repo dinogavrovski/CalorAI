@@ -18,7 +18,6 @@ data class ProfileUiState(
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val profile: UserProfile? = null,
-    val editName: String = "",
     val editCalorieGoal: String = "",
     val isEditing: Boolean = false,
     val successMessage: String? = null,
@@ -34,9 +33,7 @@ class ProfileViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
-    init {
-        loadProfile()
-    }
+    init { loadProfile() }
 
     fun loadProfile() {
         viewModelScope.launch {
@@ -45,17 +42,10 @@ class ProfileViewModel @Inject constructor(
                 is ApiResult.Success -> {
                     val profile = result.data
                     _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            profile = profile,
-                            editName = profile.name,
-                            editCalorieGoal = profile.calorieGoal.toString()
-                        )
+                        it.copy(isLoading = false, profile = profile, editCalorieGoal = profile.calorieGoal.toString())
                     }
                 }
-                is ApiResult.Error -> _uiState.update {
-                    it.copy(isLoading = false, errorMessage = result.message)
-                }
+                is ApiResult.Error -> _uiState.update { it.copy(isLoading = false, errorMessage = result.message) }
                 else -> _uiState.update { it.copy(isLoading = false) }
             }
         }
@@ -63,18 +53,7 @@ class ProfileViewModel @Inject constructor(
 
     fun toggleEdit() {
         val profile = _uiState.value.profile ?: return
-        _uiState.update {
-            it.copy(
-                isEditing = !it.isEditing,
-                editName = profile.name,
-                editCalorieGoal = profile.calorieGoal.toString(),
-                errorMessage = null
-            )
-        }
-    }
-
-    fun updateName(name: String) {
-        _uiState.update { it.copy(editName = name) }
+        _uiState.update { it.copy(isEditing = !it.isEditing, editCalorieGoal = profile.calorieGoal.toString(), errorMessage = null) }
     }
 
     fun updateCalorieGoal(goal: String) {
@@ -92,30 +71,18 @@ class ProfileViewModel @Inject constructor(
         }
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
-            when (val result = mealRepository.updateProfile(
-                name = state.editName.trim().ifBlank { null },
-                calorieGoal = goal
-            )) {
+            when (val result = mealRepository.updateProfile(goal)) {
                 is ApiResult.Success -> _uiState.update {
-                    it.copy(
-                        isSaving = false,
-                        isEditing = false,
-                        profile = result.data,
-                        successMessage = "Profile updated!"
-                    )
+                    it.copy(isSaving = false, isEditing = false, profile = result.data, successMessage = "Profile updated!")
                 }
-                is ApiResult.Error -> _uiState.update {
-                    it.copy(isSaving = false, errorMessage = result.message)
-                }
+                is ApiResult.Error -> _uiState.update { it.copy(isSaving = false, errorMessage = result.message) }
                 else -> _uiState.update { it.copy(isSaving = false) }
             }
         }
     }
 
     fun logout() {
-        viewModelScope.launch {
-            authRepository.logout()
-        }
+        viewModelScope.launch { authRepository.logout() }
     }
 
     fun clearMessages() {

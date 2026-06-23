@@ -9,12 +9,12 @@ import com.squareup.moshi.JsonClass
 data class RegisterRequest(
     @Json(name = "email") val email: String,
     @Json(name = "password") val password: String,
-    @Json(name = "name") val name: String
+    @Json(name = "username") val username: String
 )
 
 @JsonClass(generateAdapter = true)
 data class LoginRequest(
-    @Json(name = "email") val email: String,
+    @Json(name = "username") val username: String,
     @Json(name = "password") val password: String
 )
 
@@ -30,14 +30,11 @@ data class AuthResponse(
 data class UserProfile(
     @Json(name = "id") val id: String,
     @Json(name = "email") val email: String,
-    @Json(name = "name") val name: String,
-    @Json(name = "calorie_goal") val calorieGoal: Int = 2000,
-    @Json(name = "avatar_url") val avatarUrl: String? = null
+    @Json(name = "calorie_goal") val calorieGoal: Int = 2000
 )
 
 @JsonClass(generateAdapter = true)
 data class UpdateProfileRequest(
-    @Json(name = "name") val name: String? = null,
     @Json(name = "calorie_goal") val calorieGoal: Int? = null
 )
 
@@ -45,46 +42,37 @@ data class UpdateProfileRequest(
 
 @JsonClass(generateAdapter = true)
 data class EstimateRequest(
-    @Json(name = "text") val text: String
+    @Json(name = "note") val note: String
 )
 
 @JsonClass(generateAdapter = true)
 data class FoodItem(
-    @Json(name = "name") val name: String,
-    @Json(name = "calories_min") val caloriesMin: Int,
-    @Json(name = "calories_max") val caloriesMax: Int
+    @Json(name = "parsed_food") val name: String,
+    @Json(name = "calories") val calories: Double,
+    @Json(name = "calorie_range") val calorieRange: List<Double>
 )
 
 @JsonClass(generateAdapter = true)
 data class EstimateResponse(
+    @Json(name = "note") val note: String,
     @Json(name = "items") val items: List<FoodItem>,
-    @Json(name = "total_min") val totalMin: Int,
-    @Json(name = "total_max") val totalMax: Int
+    @Json(name = "total_calories") val totalCalories: Double,
+    @Json(name = "total_calorie_range") val totalCalorieRange: List<Double>
 )
 
 // ─── Meals ───────────────────────────────────────────────────────────────────
 
 @JsonClass(generateAdapter = true)
 data class LogMealRequest(
-    @Json(name = "text") val text: String,
-    @Json(name = "items") val items: List<FoodItem>,
-    @Json(name = "total_min") val totalMin: Int,
-    @Json(name = "total_max") val totalMax: Int
+    @Json(name = "note") val note: String
 )
 
 @JsonClass(generateAdapter = true)
 data class MealLog(
     @Json(name = "id") val id: String,
-    @Json(name = "text") val text: String,
+    @Json(name = "note") val note: String,
     @Json(name = "items") val items: List<FoodItem>,
-    @Json(name = "total_min") val totalMin: Int,
-    @Json(name = "total_max") val totalMax: Int,
-    @Json(name = "logged_at") val loggedAt: String
-)
-
-@JsonClass(generateAdapter = true)
-data class MealHistoryResponse(
-    @Json(name = "meals") val meals: List<MealLog>,
-    @Json(name = "total_calories_today_min") val totalCaloriesTodayMin: Int = 0,
-    @Json(name = "total_calories_today_max") val totalCaloriesTodayMax: Int = 0
+    @Json(name = "total_calories") val totalCalories: Double,
+    @Json(name = "total_calorie_range") val totalCalorieRange: List<Double>,
+    @Json(name = "timestamp") val timestamp: String
 )

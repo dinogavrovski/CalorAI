@@ -36,7 +36,7 @@ class HistoryViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             when (val result = mealRepository.getMealHistory()) {
                 is ApiResult.Success -> _uiState.update {
-                    it.copy(isLoading = false, meals = result.data.meals)
+                    it.copy(isLoading = false, meals = result.data)
                 }
                 is ApiResult.Error -> _uiState.update {
                     it.copy(isLoading = false, errorMessage = result.message)

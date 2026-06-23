@@ -3,7 +3,6 @@ package com.calorai.app.ui.screens.log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.calorai.app.data.remote.models.EstimateResponse
-import com.calorai.app.data.remote.models.FoodItem
 import com.calorai.app.data.repository.ApiResult
 import com.calorai.app.data.repository.MealRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -59,15 +58,9 @@ class LogMealViewModel @Inject constructor(
 
     fun confirmAndLog() {
         val state = _uiState.value
-        val estimate = state.estimate ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isLogging = true, errorMessage = null, step = LogStep.LOGGING) }
-            when (val result = mealRepository.logMeal(
-                text = state.mealText,
-                items = estimate.items,
-                totalMin = estimate.totalMin,
-                totalMax = estimate.totalMax
-            )) {
+            when (val result = mealRepository.logMeal(state.mealText)) {
                 is ApiResult.Success -> _uiState.update { it.copy(isLogging = false, step = LogStep.SUCCESS) }
                 is ApiResult.Error -> _uiState.update {
                     it.copy(isLogging = false, errorMessage = result.message, step = LogStep.RESULT)

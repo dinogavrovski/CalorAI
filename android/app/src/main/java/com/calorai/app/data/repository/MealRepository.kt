@@ -29,16 +29,9 @@ class MealRepository @Inject constructor(
         }
     }
 
-    suspend fun logMeal(
-        text: String,
-        items: List<FoodItem>,
-        totalMin: Int,
-        totalMax: Int
-    ): ApiResult<MealLog> {
+    suspend fun logMeal(note: String): ApiResult<MealLog> {
         return try {
-            val response = apiService.logMeal(
-                LogMealRequest(text, items, totalMin, totalMax)
-            )
+            val response = apiService.logMeal(LogMealRequest(note))
             if (response.isSuccessful) {
                 ApiResult.Success(response.body()!!)
             } else {
@@ -49,7 +42,7 @@ class MealRepository @Inject constructor(
         }
     }
 
-    suspend fun getMealHistory(): ApiResult<MealHistoryResponse> {
+    suspend fun getMealHistory(): ApiResult<List<MealLog>> {
         return try {
             val response = apiService.getMealHistory()
             if (response.isSuccessful) {
@@ -75,9 +68,9 @@ class MealRepository @Inject constructor(
         }
     }
 
-    suspend fun updateProfile(name: String?, calorieGoal: Int?): ApiResult<UserProfile> {
+    suspend fun updateProfile(calorieGoal: Int?): ApiResult<UserProfile> {
         return try {
-            val response = apiService.updateProfile(UpdateProfileRequest(name, calorieGoal))
+            val response = apiService.updateProfile(UpdateProfileRequest(calorieGoal))
             if (response.isSuccessful) {
                 ApiResult.Success(response.body()!!)
             } else {

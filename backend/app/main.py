@@ -11,7 +11,7 @@ from app.db.database import engine
 from app.db.base import Base
 from app.models import meal_log, refresh_session, user  # noqa: F401
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(dotenv_path=PROJECT_ROOT / ".env")
 
 Base.metadata.create_all(bind=engine)

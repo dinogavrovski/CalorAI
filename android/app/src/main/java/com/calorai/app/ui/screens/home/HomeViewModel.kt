@@ -17,13 +17,12 @@ import javax.inject.Inject
 data class HomeUiState(
     val isLoading: Boolean = false,
     val profile: UserProfile? = null,
-    val todayCaloriesMin: Int = 0,
-    val todayCaloriesMax: Int = 0,
+    val todayCalories: Int = 0,
     val recentMeals: List<MealLog> = emptyList(),
     val errorMessage: String? = null
 ) {
     val calorieGoal: Int get() = profile?.calorieGoal ?: 2000
-    val consumedCalories: Int get() = (todayCaloriesMin + todayCaloriesMax) / 2
+    val consumedCalories: Int get() = todayCalories
 }
 
 @HiltViewModel
@@ -34,37 +33,27 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    init {
-        loadData()
-    }
+    init { loadData() }
 
     fun loadData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-            // Load profile
             when (val profileResult = mealRepository.getProfile()) {
                 is ApiResult.Success -> _uiState.update { it.copy(profile = profileResult.data) }
                 is ApiResult.Error -> _uiState.update { it.copy(errorMessage = profileResult.message) }
                 else -> {}
             }
 
-            // Load today's meals / history
             when (val historyResult = mealRepository.getMealHistory()) {
                 is ApiResult.Success -> {
-                    val data = historyResult.data
+                    val meals = historyResult.data
+                    val todayTotal = meals.sumOf { it.totalCalories }.toInt()
                     _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            recentMeals = data.meals.take(3),
-                            todayCaloriesMin = data.totalCaloriesTodayMin,
-                            todayCaloriesMax = data.totalCaloriesTodayMax
-                        )
+                        it.copy(isLoading = false, recentMeals = meals.take(3), todayCalories = todayTotal)
                     }
                 }
-                is ApiResult.Error -> _uiState.update {
-                    it.copy(isLoading = false, errorMessage = historyResult.message)
-                }
+                is ApiResult.Error -> _uiState.update { it.copy(isLoading = false, errorMessage = historyResult.message) }
                 else -> _uiState.update { it.copy(isLoading = false) }
             }
         }
