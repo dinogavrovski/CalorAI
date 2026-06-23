@@ -1,5 +1,6 @@
 package com.calorai.app.ui.screens.home
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -10,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -19,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.calorai.app.data.remote.models.MealLog
 import com.calorai.app.ui.components.CalorieProgressRing
+import com.calorai.app.ui.components.MacroCard
 import com.calorai.app.ui.theme.*
 
 @Composable
@@ -32,89 +35,205 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Surface0)
+            .background(Background)
             .verticalScroll(rememberScrollState())
             .padding(paddingValues)
             .padding(horizontal = 20.dp)
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
+        // Header row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Good ${greetingPart()}", style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant))
+                Text(
+                    text = "Good ${greetingPart()}",
+                    style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant)
+                )
                 Text(
                     text = uiState.profile?.email?.substringBefore("@") ?: "there",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, color = OnSurface)
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = OnSurface
+                    )
                 )
             }
-            IconButton(
-                onClick = { viewModel.loadData() },
-                modifier = Modifier.clip(CircleShape).background(Surface2).size(40.dp)
+            // Avatar circle
+            val initial = uiState.profile?.email?.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(OrangeContainer),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = OnSurfaceVariant, modifier = Modifier.size(20.dp))
+                Text(
+                    text = initial,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = OrangeAccent,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = todayDateString(),
+            style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceDim)
+        )
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Main calorie card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Surface1),
             elevation = CardDefaults.cardElevation(0.dp)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier.fillMaxWidth().padding(20.dp)
             ) {
-                Text("Today's Progress", style = MaterialTheme.typography.titleSmall.copy(color = OnSurfaceVariant, letterSpacing = 1.sp))
-                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = "TODAY'S CALORIES",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = OnSurfaceVariant,
+                        letterSpacing = 1.sp
+                    )
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
                 if (uiState.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(200.dp).padding(40.dp), color = Green400)
+                    ShimmerCalorieCard()
                 } else {
-                    CalorieProgressRing(consumed = uiState.consumedCalories, goal = uiState.calorieGoal, ringSize = 200.dp, strokeWidth = 14.dp)
-                }
-                Spacer(modifier = Modifier.height(20.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    MacroChip(label = "Consumed", value = "${uiState.todayCalories} kcal")
-                    MacroChip(label = "Goal", value = "${uiState.calorieGoal} kcal")
-                    MacroChip(label = "Left", value = "${maxOf(0, uiState.calorieGoal - uiState.todayCalories)} kcal")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                text = uiState.consumedCalories.toString(),
+                                style = MaterialTheme.typography.headlineLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurface,
+                                    fontSize = 52.sp,
+                                    letterSpacing = (-2).sp
+                                )
+                            )
+                            Text(
+                                text = "Calories Consumed",
+                                style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            val remaining = maxOf(0, uiState.calorieGoal - uiState.consumedCalories)
+                            Text(
+                                text = "$remaining left",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = OrangeAccent,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            )
+                        }
+                        CalorieProgressRing(
+                            consumed = uiState.consumedCalories,
+                            goal = uiState.calorieGoal,
+                            ringSize = 140.dp,
+                            strokeWidth = 16.dp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Macro cards row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        MacroCard(
+                            name = "Carbs",
+                            current = 0,
+                            goal = 250,
+                            color = MacroCarbs,
+                            modifier = Modifier.weight(1f)
+                        )
+                        MacroCard(
+                            name = "Protein",
+                            current = 0,
+                            goal = 150,
+                            color = MacroProtein,
+                            modifier = Modifier.weight(1f)
+                        )
+                        MacroCard(
+                            name = "Fat",
+                            current = 0,
+                            goal = 65,
+                            color = MacroFat,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Button(
-            onClick = onLogMeal,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            shape = RoundedCornerShape(18.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Green400, contentColor = Color(0xFF003314)),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
-        ) {
-            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Log a Meal", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp))
-        }
-
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (uiState.recentMeals.isNotEmpty()) {
-            Text("Recent Meals", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, color = OnSurface))
-            Spacer(modifier = Modifier.height(12.dp))
-            uiState.recentMeals.forEach { meal ->
-                RecentMealCard(meal = meal)
-                Spacer(modifier = Modifier.height(8.dp))
+        // Recent Meals section
+        if (!uiState.isLoading && uiState.recentMeals.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Recent Meals",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = OnSurface
+                    )
+                )
+                TextButton(onClick = {}) {
+                    Text(
+                        text = "See All →",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = OrangeAccent,
+                            fontWeight = FontWeight.Medium
+                        )
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Surface1),
+                elevation = CardDefaults.cardElevation(0.dp)
+            ) {
+                Column {
+                    uiState.recentMeals.forEachIndexed { index, meal ->
+                        RecentMealRow(meal = meal)
+                        if (index < uiState.recentMeals.lastIndex) {
+                            HorizontalDivider(
+                                color = Surface2,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
 
         uiState.errorMessage?.let { error ->
             Spacer(modifier = Modifier.height(12.dp))
-            Text(error, style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error))
+            Text(
+                text = error,
+                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error)
+            )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -122,43 +241,124 @@ fun HomeScreen(
 }
 
 @Composable
-private fun MacroChip(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.labelMedium.copy(color = OnSurface, fontWeight = FontWeight.SemiBold))
-        Text(label, style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant))
+private fun ShimmerCalorieCard() {
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "shimmerAlpha"
+    )
+    Column {
+        Box(
+            modifier = Modifier
+                .width(120.dp)
+                .height(52.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Surface2)
+                .alpha(alpha)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .width(80.dp)
+                .height(14.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(Surface2)
+                .alpha(alpha)
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            repeat(3) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(72.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Surface2)
+                        .alpha(alpha)
+                )
+            }
+        }
     }
 }
 
 @Composable
-private fun RecentMealCard(meal: MealLog) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface1),
-        elevation = CardDefaults.cardElevation(0.dp)
+private fun RecentMealRow(meal: MealLog) {
+    val mealColors = listOf(
+        Color(0xFF3D1A0A), Color(0xFF1A1A3D), Color(0xFF0A3D1A), Color(0xFF3D3A0A)
+    )
+    val mealIconColors = listOf(OrangeAccent, MacroProtein, MacroFat, MacroCarbs)
+    val colorIndex = (meal.note.hashCode() and 0x7FFFFFFF) % mealColors.size
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(mealColors[colorIndex]),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier.size(42.dp).clip(RoundedCornerShape(12.dp)).background(GreenContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Restaurant, contentDescription = null, tint = Green400, modifier = Modifier.size(20.dp))
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                val displayNote = meal.note.take(40).let { if (meal.note.length > 40) "$it…" else it }
-                Text(displayNote, style = MaterialTheme.typography.bodyMedium.copy(color = OnSurface, fontWeight = FontWeight.Medium), maxLines = 1)
-                Text(meal.timestamp.take(10), style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant))
-            }
-            Text("${meal.totalCalories.toInt()} kcal", style = MaterialTheme.typography.labelMedium.copy(color = Green400, fontWeight = FontWeight.SemiBold))
+            Icon(
+                Icons.Default.Restaurant,
+                contentDescription = null,
+                tint = mealIconColors[colorIndex],
+                modifier = Modifier.size(20.dp)
+            )
         }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            val displayNote = if (meal.note.length > 40) meal.note.take(40) + "…" else meal.note
+            Text(
+                text = displayNote,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = OnSurface,
+                    fontWeight = FontWeight.Medium
+                ),
+                maxLines = 1
+            )
+            Text(
+                text = formatMealTime(meal.timestamp),
+                style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
+            )
+        }
+        Text(
+            text = "${meal.totalCalories.toInt()} kcal",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                color = OrangeAccent,
+                fontWeight = FontWeight.SemiBold
+            )
+        )
     }
 }
 
 private fun greetingPart(): String {
     val hour = java.time.LocalTime.now().hour
-    return when { hour < 12 -> "morning"; hour < 17 -> "afternoon"; else -> "evening" }
+    return when {
+        hour < 12 -> "morning"
+        hour < 17 -> "afternoon"
+        else -> "evening"
+    }
+}
+
+private fun todayDateString(): String {
+    val now = java.time.LocalDate.now()
+    return now.format(java.time.format.DateTimeFormatter.ofPattern("EEEE, MMMM d"))
+}
+
+private fun formatMealTime(isoDate: String): String {
+    return try {
+        val date = java.time.OffsetDateTime.parse(isoDate)
+        date.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+    } catch (e: Exception) {
+        isoDate.take(10)
+    }
 }

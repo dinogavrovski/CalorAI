@@ -1,6 +1,8 @@
 package com.calorai.app.ui.screens.auth
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -45,15 +48,18 @@ fun RegisterScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Surface0)
+            .background(Background)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(260.dp)
+                .height(300.dp)
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Green400.copy(alpha = 0.06f), Color.Transparent)
+                        colors = listOf(
+                            OrangeAccent.copy(alpha = 0.08f),
+                            Color.Transparent
+                        )
                     )
                 )
         )
@@ -66,23 +72,24 @@ fun RegisterScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Spacer(modifier = Modifier.height(64.dp))
+            Spacer(modifier = Modifier.height(72.dp))
 
             Text(
                 text = "CalorAI",
-                style = MaterialTheme.typography.displaySmall.copy(
+                style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.ExtraBold,
-                    color = Green400,
-                    letterSpacing = (-1).sp
+                    color = OrangeAccent,
+                    letterSpacing = (-1.5).sp
                 )
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Start your journey today.",
-                style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant)
+                text = "Track smarter, eat better",
+                style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant),
+                textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(52.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -119,7 +126,7 @@ fun RegisterScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        colors = premiumOutlinedFieldColors()
+                        colors = orangeFieldColors()
                     )
 
                     OutlinedTextField(
@@ -139,7 +146,7 @@ fun RegisterScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        colors = premiumOutlinedFieldColors()
+                        colors = orangeFieldColors()
                     )
 
                     OutlinedTextField(
@@ -172,7 +179,7 @@ fun RegisterScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        colors = premiumOutlinedFieldColors()
+                        colors = orangeFieldColors()
                     )
 
                     Text(
@@ -181,7 +188,11 @@ fun RegisterScreen(
                         modifier = Modifier.padding(horizontal = 4.dp)
                     )
 
-                    AnimatedVisibility(visible = uiState.errorMessage != null) {
+                    AnimatedVisibility(
+                        visible = uiState.errorMessage != null,
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
                         Text(
                             text = uiState.errorMessage ?: "",
                             style = MaterialTheme.typography.bodySmall.copy(
@@ -196,20 +207,20 @@ fun RegisterScreen(
                             focusManager.clearFocus()
                             viewModel.register(name, email, password)
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(14.dp),
                         enabled = !uiState.isLoading,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Green400,
-                            contentColor = Color(0xFF003314)
+                            containerColor = OrangeAccent,
+                            contentColor = Color.White,
+                            disabledContainerColor = OrangeAccent.copy(alpha = 0.4f),
+                            disabledContentColor = Color.White.copy(alpha = 0.5f)
                         )
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
-                                color = Color(0xFF003314),
+                                color = Color.White,
                                 strokeWidth = 2.dp
                             )
                         } else {
@@ -225,7 +236,21 @@ fun RegisterScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HorizontalDivider(modifier = Modifier.weight(1f), color = Surface3)
+                Text(
+                    text = "  or  ",
+                    style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceDim)
+                )
+                HorizontalDivider(modifier = Modifier.weight(1f), color = Surface3)
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -235,18 +260,18 @@ fun RegisterScreen(
                     text = "Already have an account? ",
                     style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant)
                 )
-                TextButton(onClick = onNavigateToLogin) {
+                TextButton(onClick = onNavigateToLogin, contentPadding = PaddingValues(0.dp)) {
                     Text(
                         text = "Sign In",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = Green400,
+                            color = OrangeAccent,
                             fontWeight = FontWeight.SemiBold
                         )
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }

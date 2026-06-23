@@ -3,14 +3,21 @@ package com.calorai.app.navigation
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.calorai.app.ui.screens.auth.LoginScreen
@@ -19,9 +26,10 @@ import com.calorai.app.ui.screens.history.HistoryScreen
 import com.calorai.app.ui.screens.home.HomeScreen
 import com.calorai.app.ui.screens.log.LogMealScreen
 import com.calorai.app.ui.screens.profile.ProfileScreen
-import com.calorai.app.ui.theme.Green400
+import com.calorai.app.ui.theme.OrangeAccent
 import com.calorai.app.ui.theme.OnSurfaceVariant
 import com.calorai.app.ui.theme.Surface1
+import com.calorai.app.ui.theme.OnSurface
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -31,19 +39,6 @@ sealed class Screen(val route: String) {
     object History : Screen("history")
     object Profile : Screen("profile")
 }
-
-data class BottomNavItem(
-    val screen: Screen,
-    val label: String,
-    val icon: ImageVector
-)
-
-val bottomNavItems = listOf(
-    BottomNavItem(Screen.Home, "Home", Icons.Default.Home),
-    BottomNavItem(Screen.LogMeal, "Log", Icons.Default.AddCircle),
-    BottomNavItem(Screen.History, "History", Icons.Default.List),
-    BottomNavItem(Screen.Profile, "Profile", Icons.Default.Person)
-)
 
 @Composable
 fun CalorAINavGraph() {
@@ -146,39 +141,104 @@ private fun MainScaffold(
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = Surface1,
-                tonalElevation = Dp(0f)
-            ) {
-                bottomNavItems.forEach { item ->
-                    val selected = activeRoute == item.screen.route
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = {
-                            if (!selected) {
-                                navController.navigate(item.screen.route) {
-                                    popUpTo(Screen.Home.route) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        },
-                        icon = {
-                            Icon(imageVector = item.icon, contentDescription = item.label)
-                        },
-                        label = { Text(item.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Green400,
-                            selectedTextColor = Green400,
-                            unselectedIconColor = OnSurfaceVariant,
-                            unselectedTextColor = OnSurfaceVariant,
-                            indicatorColor = Green400.copy(alpha = 0.12f)
-                        )
-                    )
+            PremiumBottomBar(
+                activeRoute = activeRoute ?: Screen.Home.route,
+                onNavigate = { route ->
+                    if (activeRoute != route) {
+                        navController.navigate(route) {
+                            popUpTo(Screen.Home.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 }
-            }
+            )
         }
     ) { paddingValues ->
         content(paddingValues)
+    }
+}
+
+@Composable
+private fun PremiumBottomBar(
+    activeRoute: String,
+    onNavigate: (String) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Surface1)
+            .navigationBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Home tab
+            NavBarIcon(
+                icon = Icons.Default.Home,
+                contentDescription = "Home",
+                selected = activeRoute == Screen.Home.route,
+                onClick = { onNavigate(Screen.Home.route) }
+            )
+
+            // Center Log tab — big orange circle
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(OrangeAccent)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onNavigate(Screen.LogMeal.route) },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Log Meal",
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            // History tab
+            NavBarIcon(
+                icon = Icons.Default.Schedule,
+                contentDescription = "History",
+                selected = activeRoute == Screen.History.route,
+                onClick = { onNavigate(Screen.History.route) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun NavBarIcon(
+    icon: ImageVector,
+    contentDescription: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .clip(CircleShape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = if (selected) OrangeAccent else OnSurfaceVariant,
+            modifier = Modifier.size(24.dp)
+        )
     }
 }

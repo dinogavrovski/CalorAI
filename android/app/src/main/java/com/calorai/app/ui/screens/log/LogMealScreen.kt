@@ -3,6 +3,7 @@ package com.calorai.app.ui.screens.log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,7 +14,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -35,47 +42,27 @@ fun LogMealScreen(
 
     LaunchedEffect(uiState.step) {
         if (uiState.step == LogStep.SUCCESS) {
-            kotlinx.coroutines.delay(1200)
+            kotlinx.coroutines.delay(1400)
             onMealLogged()
             viewModel.reset()
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Surface0)
+            .background(Background)
             .padding(paddingValues)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (uiState.step == LogStep.RESULT) {
-                IconButton(
-                    onClick = { viewModel.goBack() },
-                    modifier = Modifier.clip(CircleShape).background(Surface2).size(40.dp)
-                ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = OnSurface, modifier = Modifier.size(20.dp))
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-            }
-            Text(
-                text = when (uiState.step) {
-                    LogStep.INPUT -> "Log a Meal"
-                    LogStep.RESULT -> "AI Estimate"
-                    LogStep.LOGGING -> "Saving…"
-                    LogStep.SUCCESS -> "Saved!"
-                },
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = OnSurface)
-            )
-        }
-
         AnimatedContent(
             targetState = uiState.step,
             transitionSpec = {
-                fadeIn(tween(300)) + slideInHorizontally(tween(300)) { it / 3 } togetherWith
-                        fadeOut(tween(200)) + slideOutHorizontally(tween(200)) { -it / 3 }
+                when (targetState) {
+                    LogStep.RESULT -> fadeIn(tween(350)) + slideInVertically(tween(350)) { it / 4 } togetherWith
+                            fadeOut(tween(200))
+                    LogStep.SUCCESS -> fadeIn(tween(300)) togetherWith fadeOut(tween(200))
+                    else -> fadeIn(tween(280)) togetherWith fadeOut(tween(200))
+                }
             },
             label = "logStep"
         ) { step ->
@@ -92,11 +79,16 @@ fun LogMealScreen(
                     mealText = uiState.mealText,
                     errorMessage = uiState.errorMessage,
                     onConfirm = { viewModel.confirmAndLog() },
-                    onRetry = { viewModel.goBack() }
+                    onEdit = { viewModel.goBack() }
                 )
-                LogStep.LOGGING -> LoadingStep(message = "Saving your meal…")
+                LogStep.LOGGING -> AnalyzingStep(message = "Saving your meal…", cycling = false)
                 LogStep.SUCCESS -> SuccessStep()
             }
+        }
+
+        // ANALYZING overlay — shown while isEstimating is true but step is still INPUT
+        if (uiState.isEstimating) {
+            AnalyzingStep(message = null, cycling = true)
         }
     }
 }
@@ -109,49 +101,118 @@ private fun InputStep(
     errorMessage: String?,
     onSubmit: () -> Unit
 ) {
+    var fieldFocused by remember { mutableStateOf(false) }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "underline")
+    val underlineAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "underlineAlpha"
+    )
+
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "Log a Meal",
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.Bold,
+                color = OnSurface
+            )
+        )
+
+        Text(
+            text = "Describe what you ate and we'll estimate the calories.",
+            style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant)
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Surface1),
             elevation = CardDefaults.cardElevation(0.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
-                Text("What did you eat?", style = MaterialTheme.typography.titleMedium.copy(color = OnSurface, fontWeight = FontWeight.SemiBold))
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Describe your meal naturally — our AI will estimate the calories.", style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant))
-                Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = mealText,
                     onValueChange = onTextChange,
-                    placeholder = { Text("e.g. \"Two scrambled eggs, toast with butter, orange juice\"", style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceDim)) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
+                    placeholder = {
+                        Text(
+                            "e.g. \"Two scrambled eggs, toast with butter, orange juice\"",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceDim)
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 140.dp)
+                        .onFocusChanged { fieldFocused = it.isFocused },
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Green400, unfocusedBorderColor = Surface3,
-                        focusedTextColor = OnSurface, unfocusedTextColor = OnSurface,
-                        cursorColor = Green400, focusedContainerColor = Surface2, unfocusedContainerColor = Surface1
+                        focusedBorderColor = OrangeAccent,
+                        unfocusedBorderColor = Surface3,
+                        focusedTextColor = OnSurface,
+                        unfocusedTextColor = OnSurface,
+                        cursorColor = OrangeAccent,
+                        focusedContainerColor = Surface2,
+                        unfocusedContainerColor = Surface1
                     ),
-                    maxLines = 6
+                    maxLines = 8
                 )
+
+                // Pulsing orange underline when focused
+                if (fieldFocused) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.4f)
+                            .height(2.dp)
+                            .clip(RoundedCornerShape(1.dp))
+                            .background(OrangeAccent.copy(alpha = underlineAlpha))
+                    )
+                }
             }
         }
 
         errorMessage?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error), modifier = Modifier.padding(horizontal = 4.dp))
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error),
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
         }
 
-        Text("Try something like:", style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceDim))
+        Text(
+            text = "Try something like:",
+            style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceDim)
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Chicken salad", "Pasta bolognese", "Avocado toast").forEach { example ->
                 SuggestionChip(
                     onClick = { onTextChange(example) },
-                    label = { Text(example, style = MaterialTheme.typography.labelSmall.copy(color = Green400)) },
-                    border = SuggestionChipDefaults.suggestionChipBorder(enabled = true, borderColor = Green400.copy(alpha = 0.4f)),
-                    colors = SuggestionChipDefaults.suggestionChipColors(containerColor = GreenContainer.copy(alpha = 0.5f))
+                    label = {
+                        Text(
+                            example,
+                            style = MaterialTheme.typography.labelSmall.copy(color = OrangeAccent)
+                        )
+                    },
+                    border = SuggestionChipDefaults.suggestionChipBorder(
+                        enabled = true,
+                        borderColor = OrangeAccent.copy(alpha = 0.4f)
+                    ),
+                    colors = SuggestionChipDefaults.suggestionChipColors(
+                        containerColor = OrangeContainer.copy(alpha = 0.5f)
+                    )
                 )
             }
         }
@@ -161,24 +222,113 @@ private fun InputStep(
         Button(
             onClick = onSubmit,
             modifier = Modifier.fillMaxWidth().height(56.dp),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(14.dp),
             enabled = mealText.isNotBlank() && !isLoading,
             colors = ButtonDefaults.buttonColors(
-                containerColor = Green400, contentColor = Color(0xFF003314),
-                disabledContainerColor = Green400.copy(alpha = 0.3f), disabledContentColor = Color(0xFF003314).copy(alpha = 0.5f)
+                containerColor = OrangeAccent,
+                contentColor = Color.White,
+                disabledContainerColor = OrangeAccent.copy(alpha = 0.3f),
+                disabledContentColor = Color.White.copy(alpha = 0.5f)
             )
         ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color(0xFF003314), strokeWidth = 2.5.dp)
-                Spacer(modifier = Modifier.width(10.dp))
-                Text("Analysing…", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
-            } else {
-                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Estimate Calories", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp))
-            }
+            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                "Analyze",
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            )
         }
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun AnalyzingStep(message: String?, cycling: Boolean) {
+    val messages = listOf(
+        "Reading your meal…",
+        "Estimating portions…",
+        "Calculating calories…"
+    )
+    var messageIndex by remember { mutableStateOf(0) }
+
+    LaunchedEffect(cycling) {
+        if (cycling) {
+            while (true) {
+                kotlinx.coroutines.delay(1200)
+                messageIndex = (messageIndex + 1) % messages.size
+            }
+        }
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "analyzingArc")
+    val arcRotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing)
+        ),
+        label = "arcRotation"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier.size(80.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val strokePx = 8.dp.toPx()
+                    val inset = strokePx / 2f
+                    val arcSize = Size(size.width - strokePx, size.height - strokePx)
+
+                    // Track
+                    drawArc(
+                        color = Surface2,
+                        startAngle = 0f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        topLeft = Offset(inset, inset),
+                        size = arcSize,
+                        style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                    )
+                    // Spinning arc
+                    drawArc(
+                        color = OrangeAccent,
+                        startAngle = arcRotation,
+                        sweepAngle = 100f,
+                        useCenter = false,
+                        topLeft = Offset(inset, inset),
+                        size = arcSize,
+                        style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(28.dp))
+            AnimatedContent(
+                targetState = if (cycling) messages[messageIndex] else (message ?: ""),
+                transitionSpec = {
+                    fadeIn(tween(400)) togetherWith fadeOut(tween(400))
+                },
+                label = "analyzingText"
+            ) { text ->
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        color = OnSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
     }
 }
 
@@ -188,77 +338,194 @@ private fun ResultStep(
     mealText: String,
     errorMessage: String?,
     onConfirm: () -> Unit,
-    onRetry: () -> Unit
+    onEdit: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
     ) {
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = onEdit,
+                modifier = Modifier.clip(CircleShape).background(Surface2).size(40.dp)
+            ) {
+                Icon(
+                    Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = OnSurface,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = "AI Estimate",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = OnSurface
+                )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Meal description chip
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = GreenContainer.copy(alpha = 0.4f)),
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = OrangeContainer.copy(alpha = 0.4f)),
             elevation = CardDefaults.cardElevation(0.dp)
         ) {
-            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Restaurant, contentDescription = null, tint = Green400, modifier = Modifier.size(18.dp))
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Restaurant,
+                    contentDescription = null,
+                    tint = OrangeAccent,
+                    modifier = Modifier.size(18.dp)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = mealText, style = MaterialTheme.typography.bodySmall.copy(color = OnSurface), maxLines = 2)
+                Text(
+                    text = mealText,
+                    style = MaterialTheme.typography.bodySmall.copy(color = OnSurface),
+                    maxLines = 2
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         estimate?.let { est ->
-            val avgCalories = est.totalCalorieRange.takeIf { it.size >= 2 }?.let { ((it[0] + it[1]) / 2).toInt() } ?: est.totalCalories.toInt()
-            val rangeText = est.totalCalorieRange.takeIf { it.size >= 2 }?.let { "${it[0].toInt()}–${it[1].toInt()} kcal range" } ?: ""
+            val avgCalories = est.totalCalorieRange.takeIf { it.size >= 2 }
+                ?.let { ((it[0] + it[1]) / 2).toInt() } ?: est.totalCalories.toInt()
+            val rangeText = est.totalCalorieRange.takeIf { it.size >= 2 }
+                ?.let { "${it[0].toInt()}–${it[1].toInt()} kcal range" } ?: ""
 
+            // Big calorie display
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Surface1),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
-                Column(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Estimated Total", style = MaterialTheme.typography.labelMedium.copy(color = OnSurfaceVariant, letterSpacing = 1.sp))
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "ESTIMATED TOTAL",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = OnSurfaceVariant,
+                            letterSpacing = 1.sp
+                        )
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("$avgCalories kcal", style = MaterialTheme.typography.displaySmall.copy(color = Green400, fontWeight = FontWeight.ExtraBold))
-                    if (rangeText.isNotEmpty()) Text(rangeText, style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant))
+
+                    // Animated count-up
+                    val animatedCalories by animateIntAsState(
+                        targetValue = avgCalories,
+                        animationSpec = tween(durationMillis = 600),
+                        label = "calorieCountUp"
+                    )
+                    Text(
+                        text = "$animatedCalories",
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            color = OrangeAccent,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 56.sp,
+                            letterSpacing = (-2).sp
+                        )
+                    )
+                    Text(
+                        text = "kcal",
+                        style = MaterialTheme.typography.titleMedium.copy(color = OnSurfaceVariant)
+                    )
+                    if (rangeText.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = rangeText,
+                            style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceDim)
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Breakdown", style = MaterialTheme.typography.titleSmall.copy(color = OnSurface, fontWeight = FontWeight.SemiBold))
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = "Breakdown",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    color = OnSurface,
+                    fontWeight = FontWeight.SemiBold
+                )
+            )
+            Spacer(modifier = Modifier.height(10.dp))
 
-            est.items.forEachIndexed { index, item ->
-                FoodItemCard(item = item)
-                if (index < est.items.lastIndex) Spacer(modifier = Modifier.height(8.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Surface1),
+                elevation = CardDefaults.cardElevation(0.dp)
+            ) {
+                Column {
+                    est.items.forEachIndexed { index, item ->
+                        AnimatedFoodItemRow(item = item, index = index)
+                        if (index < est.items.lastIndex) {
+                            HorizontalDivider(
+                                color = Surface2,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
 
         errorMessage?.let {
             Spacer(modifier = Modifier.height(12.dp))
-            Text(it, style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error))
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error)
+            )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             OutlinedButton(
-                onClick = onRetry,
+                onClick = onEdit,
                 modifier = Modifier.weight(1f).height(52.dp),
                 shape = RoundedCornerShape(14.dp),
                 border = BorderStroke(1.dp, Surface3)
-            ) { Text("Re-enter", color = OnSurface) }
+            ) {
+                Text("Edit", color = OnSurface)
+            }
             Button(
                 onClick = onConfirm,
                 modifier = Modifier.weight(1f).height(52.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Green400, contentColor = Color(0xFF003314))
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = OrangeAccent,
+                    contentColor = Color.White
+                )
             ) {
-                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Log Meal", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                Text(
+                    "Log Meal",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                )
             }
         }
         Spacer(modifier = Modifier.height(24.dp))
@@ -266,46 +533,106 @@ private fun ResultStep(
 }
 
 @Composable
-private fun FoodItemCard(item: FoodItem) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface2),
-        elevation = CardDefaults.cardElevation(0.dp)
-    ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Green400))
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(text = item.name, style = MaterialTheme.typography.bodyMedium.copy(color = OnSurface), modifier = Modifier.weight(1f))
-            val rangeText = item.calorieRange.takeIf { it.size >= 2 }?.let { "${it[0].toInt()}–${it[1].toInt()}" } ?: "${item.calories.toInt()}"
-            Text(text = rangeText, style = MaterialTheme.typography.labelMedium.copy(color = Green400, fontWeight = FontWeight.SemiBold))
-            Text(text = " kcal", style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant))
-        }
-    }
-}
+private fun AnimatedFoodItemRow(item: FoodItem, index: Int) {
+    val animatedCalories by animateIntAsState(
+        targetValue = item.calories.toInt(),
+        animationSpec = tween(durationMillis = 600, delayMillis = index * 80),
+        label = "foodCalories$index"
+    )
+    val rangeText = item.calorieRange.takeIf { it.size >= 2 }
+        ?.let { "${it[0].toInt()}–${it[1].toInt()}" } ?: "$animatedCalories"
 
-@Composable
-private fun LoadingStep(message: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(color = Green400, strokeWidth = 3.dp, modifier = Modifier.size(52.dp))
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(message, style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant))
-        }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(OrangeAccent)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = item.name,
+            style = MaterialTheme.typography.bodyMedium.copy(color = OnSurface),
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = rangeText,
+            style = MaterialTheme.typography.labelMedium.copy(
+                color = OrangeAccent,
+                fontWeight = FontWeight.SemiBold
+            )
+        )
+        Text(
+            text = " kcal",
+            style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
+        )
     }
 }
 
 @Composable
 private fun SuccessStep() {
+    var scaleTarget by remember { mutableStateOf(0f) }
+    val scale by animateFloatAsState(
+        targetValue = scaleTarget,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "successScale"
+    )
+    var textVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        scaleTarget = 1f
+    }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(300)
+        textVisible = true
+    }
+
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(modifier = Modifier.size(80.dp).clip(CircleShape).background(GreenContainer), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Check, contentDescription = null, tint = Green400, modifier = Modifier.size(40.dp))
+            Box(
+                modifier = Modifier
+                    .size(88.dp)
+                    .scale(scale)
+                    .clip(CircleShape)
+                    .background(OrangeAccent),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(44.dp)
+                )
             }
-            Spacer(modifier = Modifier.height(20.dp))
-            Text("Meal Logged!", style = MaterialTheme.typography.headlineSmall.copy(color = Green400, fontWeight = FontWeight.Bold))
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Returning to home…", style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant))
+            Spacer(modifier = Modifier.height(24.dp))
+            AnimatedVisibility(
+                visible = textVisible,
+                enter = fadeIn(tween(300))
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Meal Logged!",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            color = OnSurface,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Returning to home…",
+                        style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant)
+                    )
+                }
+            }
         }
     }
 }

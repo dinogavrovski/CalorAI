@@ -1,16 +1,15 @@
 package com.calorai.app.ui.screens.auth
 
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -48,17 +48,17 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Surface0)
+            .background(Background)
     ) {
-        // Subtle gradient accent at the top
+        // Subtle orange gradient at top
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(260.dp)
+                .height(300.dp)
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Green400.copy(alpha = 0.06f),
+                            OrangeAccent.copy(alpha = 0.08f),
                             Color.Transparent
                         )
                     )
@@ -73,28 +73,27 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Spacer(modifier = Modifier.height(64.dp))
+            Spacer(modifier = Modifier.height(72.dp))
 
-            // Logo / Brand
+            // App logo
             Text(
                 text = "CalorAI",
-                style = MaterialTheme.typography.displaySmall.copy(
+                style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.ExtraBold,
-                    color = Green400,
-                    letterSpacing = (-1).sp
+                    color = OrangeAccent,
+                    letterSpacing = (-1.5).sp
                 )
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Track smarter. Eat better.",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = OnSurfaceVariant
-                )
+                text = "Track smarter, eat better",
+                style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant),
+                textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(52.dp))
 
-            // Card
+            // Form card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
@@ -113,7 +112,6 @@ fun LoginScreen(
                         )
                     )
 
-                    // Email field
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it; viewModel.clearError() },
@@ -131,10 +129,9 @@ fun LoginScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        colors = premiumOutlinedFieldColors()
+                        colors = orangeFieldColors()
                     )
 
-                    // Password field
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it; viewModel.clearError() },
@@ -146,7 +143,7 @@ fun LoginScreen(
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                    contentDescription = null,
                                     tint = OnSurfaceVariant
                                 )
                             }
@@ -165,11 +162,14 @@ fun LoginScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        colors = premiumOutlinedFieldColors()
+                        colors = orangeFieldColors()
                     )
 
-                    // Error message
-                    AnimatedVisibility(visible = uiState.errorMessage != null) {
+                    AnimatedVisibility(
+                        visible = uiState.errorMessage != null,
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
                         Text(
                             text = uiState.errorMessage ?: "",
                             style = MaterialTheme.typography.bodySmall.copy(
@@ -179,26 +179,25 @@ fun LoginScreen(
                         )
                     }
 
-                    // Login button
                     Button(
                         onClick = {
                             focusManager.clearFocus()
                             viewModel.login(email, password)
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(14.dp),
                         enabled = !uiState.isLoading,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Green400,
-                            contentColor = Color(0xFF003314)
+                            containerColor = OrangeAccent,
+                            contentColor = Color.White,
+                            disabledContainerColor = OrangeAccent.copy(alpha = 0.4f),
+                            disabledContentColor = Color.White.copy(alpha = 0.5f)
                         )
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
-                                color = Color(0xFF003314),
+                                color = Color.White,
                                 strokeWidth = 2.dp
                             )
                         } else {
@@ -214,9 +213,29 @@ fun LoginScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-            // Register link
+            // Or divider
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = Surface3
+                )
+                Text(
+                    text = "  or  ",
+                    style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceDim)
+                )
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = Surface3
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
@@ -225,31 +244,35 @@ fun LoginScreen(
                     text = "Don't have an account? ",
                     style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant)
                 )
-                TextButton(onClick = onNavigateToRegister) {
+                TextButton(onClick = onNavigateToRegister, contentPadding = PaddingValues(0.dp)) {
                     Text(
                         text = "Sign Up",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = Green400,
+                            color = OrangeAccent,
                             fontWeight = FontWeight.SemiBold
                         )
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
 
 @Composable
-fun premiumOutlinedFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = Green400,
+fun orangeFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = OrangeAccent,
     unfocusedBorderColor = Surface3,
-    focusedLabelColor = Green400,
+    focusedLabelColor = OrangeAccent,
     unfocusedLabelColor = OnSurfaceVariant,
-    cursorColor = Green400,
+    cursorColor = OrangeAccent,
     focusedTextColor = OnSurface,
     unfocusedTextColor = OnSurface,
     focusedContainerColor = Surface2,
     unfocusedContainerColor = Surface1
 )
+
+// Keep old name for RegisterScreen compatibility
+@Composable
+fun premiumOutlinedFieldColors() = orangeFieldColors()

@@ -93,6 +93,9 @@ dependencies {
     implementation(libs.moshi.kotlin)
     ksp(libs.moshi.kotlin.codegen)
 
+    // Google Fonts
+    implementation(libs.compose.ui.text.google.fonts)
+
     // Image loading
     implementation(libs.coil.compose)
 
