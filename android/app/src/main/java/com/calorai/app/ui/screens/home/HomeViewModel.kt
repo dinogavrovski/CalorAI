@@ -18,11 +18,17 @@ data class HomeUiState(
     val isLoading: Boolean = false,
     val profile: UserProfile? = null,
     val todayCalories: Int = 0,
+    val todayCarbs: Float = 0f,
+    val todayProtein: Float = 0f,
+    val todayFat: Float = 0f,
     val recentMeals: List<MealLog> = emptyList(),
     val errorMessage: String? = null
 ) {
     val calorieGoal: Int get() = profile?.calorieGoal ?: 2000
     val consumedCalories: Int get() = todayCalories
+    val consumedCarbs: Float get() = todayCarbs
+    val consumedProtein: Float get() = todayProtein
+    val consumedFat: Float get() = todayFat
 }
 
 @HiltViewModel

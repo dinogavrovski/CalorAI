@@ -76,3 +76,17 @@ data class MealLog(
     @Json(name = "total_calorie_range") val totalCalorieRange: List<Double>,
     @Json(name = "timestamp") val timestamp: String
 )
+
+// ─── Weight ──────────────────────────────────────────────────────────────────
+
+@JsonClass(generateAdapter = true)
+data class WeightEntry(
+    @Json(name = "id") val id: Int,
+    @Json(name = "weight_kg") val weightKg: Double,
+    @Json(name = "logged_at") val loggedAt: String
+)
+
+@JsonClass(generateAdapter = true)
+data class LogWeightRequest(
+    @Json(name = "weight_kg") val weightKg: Double
+)

@@ -34,4 +34,15 @@ interface ApiService {
 
     @GET("user/meal-history")
     suspend fun getMealHistory(): Response<List<MealLog>>
+
+    // ── Weight ────────────────────────────────────────────────────────────────
+
+    @POST("user/weight")
+    suspend fun logWeight(@Body request: LogWeightRequest): Response<WeightEntry>
+
+    @GET("user/weight")
+    suspend fun getWeightHistory(@Query("period") period: String): Response<List<WeightEntry>>
+
+    @GET("user/weight/latest")
+    suspend fun getLatestWeight(): Response<WeightEntry>
 }

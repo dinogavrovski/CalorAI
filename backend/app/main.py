@@ -7,9 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from sqlalchemy import text
 from app.api.routes import ai, auth, user as user_router
+from app.api.routes import weight as weight_router
 from app.db.database import engine
 from app.db.base import Base
-from app.models import meal_log, refresh_session, user  # noqa: F401
+from app.models import meal_log, refresh_session, user, weight_log  # noqa: F401
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(dotenv_path=PROJECT_ROOT / ".env")
@@ -38,6 +39,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(user_router.router)
 app.include_router(ai.router)
+app.include_router(weight_router.router)
 
 
 def _visible_swagger_paths() -> set[str]:

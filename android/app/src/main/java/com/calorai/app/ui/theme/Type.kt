@@ -15,15 +15,15 @@ private val provider = GoogleFont.Provider(
     certificates = R.array.com_google_android_gms_fonts_certs
 )
 
-private val InterFont = GoogleFont("Inter")
+private val JakartaFont = GoogleFont("Plus Jakarta Sans")
 
 val InterFontFamily = FontFamily(
-    Font(googleFont = InterFont, fontProvider = provider, weight = FontWeight.Normal),
-    Font(googleFont = InterFont, fontProvider = provider, weight = FontWeight.Medium),
-    Font(googleFont = InterFont, fontProvider = provider, weight = FontWeight.SemiBold),
-    Font(googleFont = InterFont, fontProvider = provider, weight = FontWeight.Bold),
-    Font(googleFont = InterFont, fontProvider = provider, weight = FontWeight.ExtraBold),
-    Font(googleFont = InterFont, fontProvider = provider, weight = FontWeight.Light),
+    Font(googleFont = JakartaFont, fontProvider = provider, weight = FontWeight.Normal),
+    Font(googleFont = JakartaFont, fontProvider = provider, weight = FontWeight.Medium),
+    Font(googleFont = JakartaFont, fontProvider = provider, weight = FontWeight.SemiBold),
+    Font(googleFont = JakartaFont, fontProvider = provider, weight = FontWeight.Bold),
+    Font(googleFont = JakartaFont, fontProvider = provider, weight = FontWeight.ExtraBold),
+    Font(googleFont = JakartaFont, fontProvider = provider, weight = FontWeight.Light),
 )
 
 val CalorAITypography = Typography(

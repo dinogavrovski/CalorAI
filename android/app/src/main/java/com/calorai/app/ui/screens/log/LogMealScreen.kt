@@ -53,6 +53,7 @@ fun LogMealScreen(
             .fillMaxSize()
             .background(Background)
             .padding(paddingValues)
+            .imePadding()
     ) {
         AnimatedContent(
             targetState = uiState.step,
