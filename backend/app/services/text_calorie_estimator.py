@@ -1,11 +1,19 @@
+import os
 from typing import Dict
 
 from app.services.groq_text_estimator import estimate_with_groq
+from app.services.gemini_estimator import estimate_with_gemini
 
 
 def estimate_from_text_note(note: str) -> Dict:
-    ai_estimate = estimate_with_groq(note)
-    if ai_estimate is not None:
-        return ai_estimate
+    provider = os.getenv("AI_PROVIDER", "groq").strip().lower()
 
-    raise RuntimeError("Groq estimation failed")
+    if provider == "gemini":
+        result = estimate_with_gemini(note)
+    else:
+        result = estimate_with_groq(note)
+
+    if result is not None:
+        return result
+
+    raise RuntimeError(f"Estimation failed for provider '{provider}'")

@@ -2,6 +2,8 @@ package com.calorai.app.navigation
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -29,7 +31,6 @@ import com.calorai.app.ui.screens.history.HistoryScreen
 import com.calorai.app.ui.screens.home.HomeScreen
 import com.calorai.app.ui.screens.log.LogMealScreen
 import com.calorai.app.ui.screens.profile.ProfileScreen
-import com.calorai.app.ui.screens.weight.WeightScreen
 import com.calorai.app.ui.theme.Background
 import com.calorai.app.ui.theme.OrangeAccent
 import com.calorai.app.ui.theme.OnSurfaceDim
@@ -43,7 +44,6 @@ sealed class Screen(val route: String) {
     object Register : Screen("register")
     object Home : Screen("home")
     object LogMeal : Screen("log_meal")
-    object Weight : Screen("weight")
     object History : Screen("history")
     object Profile : Screen("profile")
 }
@@ -51,7 +51,6 @@ sealed class Screen(val route: String) {
 // Routes that show the bottom nav
 private val bottomNavRoutes = setOf(
     Screen.Home.route,
-    Screen.Weight.route,
     Screen.History.route,
     Screen.Profile.route
 )
@@ -122,13 +121,8 @@ fun CalorAINavGraph() {
             composable(Screen.Home.route) {
                 HomeScreen(
                     onLogMeal = { navController.navigate(Screen.LogMeal.route) },
-                    onWeightClick = { navController.navigate(Screen.Weight.route) },
                     paddingValues = padding
                 )
-            }
-
-            composable(Screen.Weight.route) {
-                WeightScreen(paddingValues = padding)
             }
 
             // Log meal slides up from bottom like a modal sheet
@@ -137,26 +131,38 @@ fun CalorAINavGraph() {
                 enterTransition = {
                     slideInVertically(
                         initialOffsetY = { it },
-                        animationSpec = tween(380, easing = EaseOut)
-                    ) + fadeIn(tween(200))
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    ) + fadeIn(tween(380))
                 },
                 exitTransition = {
                     slideOutVertically(
                         targetOffsetY = { it },
-                        animationSpec = tween(300, easing = EaseInOut)
-                    ) + fadeOut(tween(200))
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ) + fadeOut(tween(250))
                 },
                 popEnterTransition = {
                     slideInVertically(
                         initialOffsetY = { it },
-                        animationSpec = tween(380, easing = EaseOut)
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
                     )
                 },
                 popExitTransition = {
                     slideOutVertically(
                         targetOffsetY = { it },
-                        animationSpec = tween(300, easing = EaseInOut)
-                    ) + fadeOut(tween(200))
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ) + fadeOut(tween(250))
                 }
             ) {
                 LogMealScreen(
@@ -229,10 +235,10 @@ private fun FloatingPillNav(
                 onClick = { onNavigate(Screen.Home.route) }
             )
             NavPillItem(
-                icon = AppIcons.Heart,
-                label = "Weight",
-                selected = activeRoute == Screen.Weight.route,
-                onClick = { onNavigate(Screen.Weight.route) }
+                icon = AppIcons.BarChart,
+                label = "History",
+                selected = activeRoute == Screen.History.route,
+                onClick = { onNavigate(Screen.History.route) }
             )
 
             Spacer(modifier = Modifier.width(4.dp))
@@ -257,12 +263,6 @@ private fun FloatingPillNav(
             }
             Spacer(modifier = Modifier.width(4.dp))
 
-            NavPillItem(
-                icon = AppIcons.BarChart,
-                label = "History",
-                selected = activeRoute == Screen.History.route,
-                onClick = { onNavigate(Screen.History.route) }
-            )
             NavPillItem(
                 icon = AppIcons.Profile,
                 label = "Profile",

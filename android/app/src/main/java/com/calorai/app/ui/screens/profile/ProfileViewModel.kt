@@ -2,14 +2,17 @@ package com.calorai.app.ui.screens.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.calorai.app.data.local.TokenDataStore
 import com.calorai.app.data.remote.models.UserProfile
 import com.calorai.app.data.repository.ApiResult
 import com.calorai.app.data.repository.AuthRepository
 import com.calorai.app.data.repository.MealRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -27,11 +30,15 @@ data class ProfileUiState(
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val mealRepository: MealRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val tokenDataStore: TokenDataStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
+
+    val calorieBias: StateFlow<Float> = tokenDataStore.calorieBias
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0f)
 
     init { loadProfile() }
 
@@ -49,6 +56,10 @@ class ProfileViewModel @Inject constructor(
                 else -> _uiState.update { it.copy(isLoading = false) }
             }
         }
+    }
+
+    fun setCalorieBias(bias: Float) {
+        viewModelScope.launch { tokenDataStore.setCalorieBias(bias) }
     }
 
     fun toggleEdit() {

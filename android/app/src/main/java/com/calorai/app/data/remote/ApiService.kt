@@ -35,6 +35,26 @@ interface ApiService {
     @GET("user/meal-history")
     suspend fun getMealHistory(): Response<List<MealLog>>
 
+    @PATCH("user/meal-history/{id}")
+    suspend fun patchMealCalories(
+        @Path("id") id: String,
+        @Body request: PatchCaloriesRequest
+    ): Response<MealLog>
+
+    // ── Saved Meals ───────────────────────────────────────────────────────────
+
+    @GET("user/saved-meals")
+    suspend fun getSavedMeals(): Response<List<SavedMeal>>
+
+    @POST("user/saved-meals")
+    suspend fun createSavedMeal(@Body request: SavedMealRequest): Response<SavedMeal>
+
+    @DELETE("user/saved-meals/{id}")
+    suspend fun deleteSavedMeal(@Path("id") id: Int): Response<Unit>
+
+    @POST("user/meal-history/quick")
+    suspend fun quickLogMeal(@Body request: QuickLogRequest): Response<MealLog>
+
     // ── Weight ────────────────────────────────────────────────────────────────
 
     @POST("user/weight")

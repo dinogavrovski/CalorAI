@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -21,6 +22,7 @@ class TokenDataStore @Inject constructor(
     companion object {
         private val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
         private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
+        val CALORIE_BIAS_KEY = floatPreferencesKey("calorie_bias")
     }
 
     val accessToken: Flow<String?> = context.dataStore.data.map { prefs ->
@@ -40,6 +42,14 @@ class TokenDataStore @Inject constructor(
             prefs[ACCESS_TOKEN_KEY] = accessToken
             prefs[REFRESH_TOKEN_KEY] = refreshToken
         }
+    }
+
+    val calorieBias: Flow<Float> = context.dataStore.data.map { prefs ->
+        prefs[CALORIE_BIAS_KEY] ?: 0f
+    }
+
+    suspend fun setCalorieBias(bias: Float) {
+        context.dataStore.edit { prefs -> prefs[CALORIE_BIAS_KEY] = bias }
     }
 
     suspend fun clearTokens() {

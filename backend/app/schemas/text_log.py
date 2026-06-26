@@ -14,7 +14,11 @@ class TextLogItem(BaseModel):
     kcal_per_gram: float
     calories: float
     calorie_range: list[float]
+    protein_g: float = 0.0
+    carbs_g: float = 0.0
+    fat_g: float = 0.0
     nutrition_source: str
+    source_label: str | None = None
     matched_description: str | None
 
 
@@ -23,3 +27,8 @@ class TextLogResponse(BaseModel):
     items: list[TextLogItem]
     total_calories: float
     total_calorie_range: list[float]
+    total_protein_g: float = 0.0
+    total_carbs_g: float = 0.0
+    total_fat_g: float = 0.0
+    sources: list[str] = []
+    web_grounded: bool = False

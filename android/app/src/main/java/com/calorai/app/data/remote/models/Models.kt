@@ -49,7 +49,13 @@ data class EstimateRequest(
 data class FoodItem(
     @Json(name = "parsed_food") val name: String,
     @Json(name = "calories") val calories: Double,
-    @Json(name = "calorie_range") val calorieRange: List<Double>
+    @Json(name = "calorie_range") val calorieRange: List<Double>,
+    @Json(name = "matched_description") val assumption: String? = null,
+    @Json(name = "estimated_grams") val estimatedGrams: Double? = null,
+    @Json(name = "protein_g") val proteinG: Double? = null,
+    @Json(name = "carbs_g") val carbsG: Double? = null,
+    @Json(name = "fat_g") val fatG: Double? = null,
+    @Json(name = "source_label") val sourceLabel: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -57,7 +63,12 @@ data class EstimateResponse(
     @Json(name = "note") val note: String,
     @Json(name = "items") val items: List<FoodItem>,
     @Json(name = "total_calories") val totalCalories: Double,
-    @Json(name = "total_calorie_range") val totalCalorieRange: List<Double>
+    @Json(name = "total_calorie_range") val totalCalorieRange: List<Double>,
+    @Json(name = "total_protein_g") val totalProteinG: Double? = null,
+    @Json(name = "total_carbs_g") val totalCarbsG: Double? = null,
+    @Json(name = "total_fat_g") val totalFatG: Double? = null,
+    @Json(name = "sources") val sources: List<String> = emptyList(),
+    @Json(name = "web_grounded") val webGrounded: Boolean = false
 )
 
 // ─── Meals ───────────────────────────────────────────────────────────────────
@@ -75,6 +86,32 @@ data class MealLog(
     @Json(name = "total_calories") val totalCalories: Double,
     @Json(name = "total_calorie_range") val totalCalorieRange: List<Double>,
     @Json(name = "timestamp") val timestamp: String
+)
+
+@JsonClass(generateAdapter = true)
+data class PatchCaloriesRequest(
+    @Json(name = "total_calories") val totalCalories: Double
+)
+
+// ─── Saved Meals ─────────────────────────────────────────────────────────────
+
+@JsonClass(generateAdapter = true)
+data class SavedMeal(
+    @Json(name = "id") val id: Int,
+    @Json(name = "name") val name: String,
+    @Json(name = "calories") val calories: Double
+)
+
+@JsonClass(generateAdapter = true)
+data class SavedMealRequest(
+    @Json(name = "name") val name: String,
+    @Json(name = "calories") val calories: Double
+)
+
+@JsonClass(generateAdapter = true)
+data class QuickLogRequest(
+    @Json(name = "name") val name: String,
+    @Json(name = "calories") val calories: Double
 )
 
 // ─── Weight ──────────────────────────────────────────────────────────────────

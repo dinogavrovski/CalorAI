@@ -10,7 +10,7 @@ from app.api.routes import ai, auth, user as user_router
 from app.api.routes import weight as weight_router
 from app.db.database import engine
 from app.db.base import Base
-from app.models import meal_log, refresh_session, user, weight_log  # noqa: F401
+from app.models import meal_log, refresh_session, saved_meal, user, weight_log  # noqa: F401
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(dotenv_path=PROJECT_ROOT / ".env")

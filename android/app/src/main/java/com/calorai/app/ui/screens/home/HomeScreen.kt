@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.calorai.app.data.remote.models.MealLog
 import com.calorai.app.ui.components.AppIcons
 import com.calorai.app.ui.components.CalorieProgressRing
 import com.calorai.app.ui.components.MacroCard
@@ -33,7 +32,6 @@ private val CardBorder = BorderStroke(1.dp, Color(0x14FFFFFF))
 @Composable
 fun HomeScreen(
     onLogMeal: () -> Unit,
-    onWeightClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     paddingValues: PaddingValues = PaddingValues()
 ) {
@@ -249,54 +247,8 @@ fun HomeScreen(
         WeightBadge(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            onClick = onWeightClick
+                .padding(horizontal = 16.dp)
         )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // ── Recent Meals ─────────────────────────────────────────────────────
-        if (!uiState.isLoading && uiState.recentMeals.isNotEmpty()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Recent Meals",
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        color = OnSurface, fontWeight = FontWeight.Bold))
-                TextButton(onClick = {}) {
-                    Text("See All →",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = OrangeAccent, fontWeight = FontWeight.SemiBold))
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .border(CardBorder, RoundedCornerShape(20.dp)),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Surface1),
-                elevation = CardDefaults.cardElevation(0.dp)
-            ) {
-                Column {
-                    uiState.recentMeals.forEachIndexed { index, meal ->
-                        RecentMealRow(meal = meal)
-                        if (index < uiState.recentMeals.lastIndex) {
-                            HorizontalDivider(
-                                color = Color(0xFF2A2A2A),
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
 
         uiState.errorMessage?.let { error ->
             Spacer(modifier = Modifier.height(12.dp))
@@ -390,59 +342,36 @@ private fun CalendarStrip() {
     }
 }
 
-@Composable
-private fun RecentMealRow(meal: MealLog) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(OrangeContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(AppIcons.Bowl, contentDescription = null,
-                tint = OrangeAccent, modifier = Modifier.size(20.dp))
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            val displayNote = if (meal.note.length > 40) meal.note.take(40) + "…" else meal.note
-            Text(displayNote,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = OnSurface, fontWeight = FontWeight.Medium),
-                maxLines = 1)
-            Text(formatMealTime(meal.timestamp),
-                style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant))
-        }
-        Text("${meal.totalCalories.toInt()} kcal",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                color = OrangeAccent, fontWeight = FontWeight.SemiBold))
-    }
-}
 
 @Composable
-private fun WeightBadge(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val viewModel: com.calorai.app.ui.screens.weight.WeightViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+private fun WeightBadge(modifier: Modifier = Modifier) {
+    val viewModel: com.calorai.app.ui.screens.weight.WeightViewModel =
+        androidx.hilt.navigation.compose.hiltViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    val weights = state.entries.map { it.weightKg.toFloat() }
+    val latest = state.latest
+    val trend = if (state.entries.size >= 2)
+        state.entries.last().weightKg - state.entries[state.entries.size - 2].weightKg
+    else null
 
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .border(CardBorder, RoundedCornerShape(16.dp))
             .background(Surface1)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Left: icon + weight value + trend
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.weight(1f)
+        ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(38.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(OrangeContainer),
                 contentAlignment = Alignment.Center
@@ -450,22 +379,51 @@ private fun WeightBadge(modifier: Modifier = Modifier, onClick: () -> Unit) {
                 Text("⚖", fontSize = 16.sp)
             }
             Column {
-                Text("Weight", style = MaterialTheme.typography.labelMedium.copy(
-                    color = OnSurfaceVariant, fontWeight = FontWeight.Medium))
-                if (state.latest != null) {
-                    Text(
-                        "%.1f kg".format(state.latest!!.weightKg),
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = OnSurface, fontWeight = FontWeight.Bold)
-                    )
+                Text(
+                    "Weight",
+                    style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
+                )
+                if (latest != null) {
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            "%.1f kg".format(latest.weightKg),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                color = OnSurface, fontWeight = FontWeight.Bold
+                            )
+                        )
+                        if (trend != null) {
+                            val trendColor = if (trend <= 0) MacroFat else Color(0xFFFF5252)
+                            Text(
+                                text = "${if (trend <= 0) "↓" else "↑"} ${"%.1f".format(Math.abs(trend))}",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = trendColor, fontWeight = FontWeight.SemiBold
+                                ),
+                                modifier = Modifier.padding(bottom = 2.dp)
+                            )
+                        }
+                    }
                 } else {
-                    Text("Tap to log", style = MaterialTheme.typography.bodySmall.copy(
-                        color = OnSurfaceDim))
+                    Text(
+                        "Not logged yet",
+                        style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceDim)
+                    )
                 }
             }
         }
-        Text("›", style = MaterialTheme.typography.titleMedium.copy(
-            color = OnSurfaceDim, fontWeight = FontWeight.Light))
+
+        // Right: sparkline
+        if (weights.size >= 2) {
+            Box(
+                modifier = Modifier
+                    .width(110.dp)
+                    .height(48.dp)
+            ) {
+                com.calorai.app.ui.components.WeightSparkline(weights = weights)
+            }
+        }
     }
 }
 

@@ -29,6 +29,7 @@ fun ProfileScreen(
     paddingValues: PaddingValues = PaddingValues()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val calorieBias by viewModel.calorieBias.collectAsStateWithLifecycle()
     var editingGoal by remember { mutableStateOf(false) }
     var goalFieldValue by remember { mutableStateOf("") }
 
@@ -274,6 +275,11 @@ fun ProfileScreen(
             }
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Calorie Estimate Bias
+        CalorieBiasCard(bias = calorieBias, onBiasChange = viewModel::setCalorieBias)
+
         // Success/error messages
         AnimatedVisibility(visible = uiState.successMessage != null) {
             Spacer(modifier = Modifier.height(12.dp))
@@ -336,6 +342,108 @@ fun ProfileScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun CalorieBiasCard(bias: Float, onBiasChange: (Float) -> Unit) {
+    // 5 steps: -0.20, -0.10, 0.0, +0.10, +0.20
+    val steps = listOf(-0.20f, -0.10f, 0f, 0.10f, 0.20f)
+    val labels = listOf("Under more", "Under", "Balanced", "Over", "Over more")
+    val stepIndex = steps.indexOfFirst { kotlin.math.abs(it - bias) < 0.05f }.takeIf { it >= 0 } ?: 2
+    val currentLabel = labels[stepIndex]
+    val biasColor = when {
+        bias < -0.05f -> Color(0xFF66BB6A)
+        bias > 0.05f -> Color(0xFFFF7043)
+        else -> OrangeAccent
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Surface1),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Tune,
+                        contentDescription = null,
+                        tint = OrangeAccent,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Column {
+                        Text(
+                            text = "Calorie Estimate Bias",
+                            style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
+                        )
+                        Text(
+                            text = currentLabel,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = biasColor,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        )
+                    }
+                }
+                Text(
+                    text = if (bias == 0f) "±0%" else "${if (bias > 0) "+" else ""}${(bias * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        color = biasColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Slider(
+                value = stepIndex.toFloat(),
+                onValueChange = { v ->
+                    val idx = v.toInt().coerceIn(0, steps.lastIndex)
+                    onBiasChange(steps[idx])
+                },
+                valueRange = 0f..4f,
+                steps = 3,
+                colors = SliderDefaults.colors(
+                    thumbColor = biasColor,
+                    activeTrackColor = biasColor,
+                    inactiveTrackColor = Surface3
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "Under more",
+                    style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceDim, fontSize = 10.sp)
+                )
+                Text(
+                    "Over more",
+                    style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceDim, fontSize = 10.sp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "When AI data is uncertain, bias the estimate toward under or over. Useful if you're cutting or bulking.",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = OnSurfaceVariant,
+                    fontSize = 11.sp
+                )
+            )
+        }
     }
 }
 

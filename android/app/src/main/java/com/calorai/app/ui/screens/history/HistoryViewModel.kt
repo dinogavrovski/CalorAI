@@ -16,7 +16,8 @@ import javax.inject.Inject
 data class HistoryUiState(
     val isLoading: Boolean = false,
     val meals: List<MealLog> = emptyList(),
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val savingMealId: String? = null
 )
 
 @HiltViewModel
@@ -29,6 +30,24 @@ class HistoryViewModel @Inject constructor(
 
     init {
         loadHistory()
+    }
+
+    fun updateMealCalories(mealId: String, calories: Double) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(savingMealId = mealId) }
+            when (val result = mealRepository.patchMealCalories(mealId, calories)) {
+                is ApiResult.Success -> _uiState.update { state ->
+                    state.copy(
+                        savingMealId = null,
+                        meals = state.meals.map { if (it.id == mealId) result.data else it }
+                    )
+                }
+                is ApiResult.Error -> _uiState.update {
+                    it.copy(savingMealId = null, errorMessage = result.message)
+                }
+                else -> _uiState.update { it.copy(savingMealId = null) }
+            }
+        }
     }
 
     fun loadHistory() {
