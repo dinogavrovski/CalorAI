@@ -185,6 +185,8 @@ private fun InputStep(
             }
         }
 
+        InputQualityHint(mealText = mealText)
+
         errorMessage?.let {
             Text(
                 text = it,
@@ -192,35 +194,6 @@ private fun InputStep(
                 modifier = Modifier.padding(horizontal = 4.dp)
             )
         }
-
-        Text(
-            text = "Try something like:",
-            style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceDim)
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Chicken salad", "Pasta bolognese", "Avocado toast").forEach { example ->
-                SuggestionChip(
-                    onClick = { onTextChange(example) },
-                    label = {
-                        Text(
-                            example,
-                            style = MaterialTheme.typography.labelSmall.copy(color = OrangeAccent)
-                        )
-                    },
-                    border = SuggestionChipDefaults.suggestionChipBorder(
-                        enabled = true,
-                        borderColor = OrangeAccent.copy(alpha = 0.4f)
-                    ),
-                    colors = SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = OrangeContainer.copy(alpha = 0.5f)
-                    )
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        InputQualityHint(mealText = mealText)
 
         Spacer(modifier = Modifier.weight(1f))
 
