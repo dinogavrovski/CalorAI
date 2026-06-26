@@ -70,29 +70,52 @@ def estimate_with_groq(note: str) -> dict[str, Any] | None:
         raise RuntimeError("GROQ_API_KEY is not configured")
 
     model = (os.getenv("GROQ_MODEL") or DEFAULT_MODEL).strip() or DEFAULT_MODEL
-    prompt = (
-        "You are a nutrition estimation assistant. Return ONLY valid JSON. "
-        "Given a meal note, extract food items and estimate calories. "
-        "Include a transparent low/high calorie range per item. "
-        "JSON schema: "
-        "{\"items\":[{\"note_part\":str,\"parsed_food\":str,\"quantity\":number,\"unit\":str|null,\"estimated_grams\":number,\"kcal_per_gram\":number,\"calories\":number,\"calorie_range\":[number,number],\"assumption\":str}],\"total_calories\":number,\"total_calorie_range\":[number,number]} "
-        "Use realistic values. If uncertain, broaden ranges and explain assumptions briefly. "
-        f"Meal note: {note}"
-    )
+
+    system_prompt = """You are a precise nutrition estimation assistant. Your job is to break down a meal description into individual food items and estimate their calories as accurately as possible.
+
+Follow this reasoning process for every item:
+1. Identify the specific food (be as precise as possible — "grilled chicken breast" not just "chicken")
+2. Estimate the portion weight in grams based on any clues in the description (serving size, adjectives like large/small, number of pieces, etc.)
+3. Look up the realistic kcal/g for that specific preparation method
+4. Multiply to get calories
+5. Set a calorie_range that reflects your uncertainty — narrow range if description was specific, wider if vague
+6. Write a brief assumption string explaining what you assumed (portion size, cooking method, brand, etc.)
+
+Rules:
+- Use standard USDA / nutritional database values for kcal/g
+- If cooking method is unspecified, assume the most common home preparation
+- If portion size is unspecified, assume a standard single adult serving
+- Never guess a round number like exactly 500 — real foods have precise values
+- Return ONLY valid JSON. No markdown, no explanation outside the JSON."""
+
+    user_prompt = f"""Analyze this meal and return a JSON object matching this exact schema:
+{{
+  "items": [
+    {{
+      "note_part": "the exact phrase from the input referring to this food",
+      "parsed_food": "standardized food name with preparation method",
+      "quantity": <number of units>,
+      "unit": "piece/slice/cup/g/ml or null",
+      "estimated_grams": <total weight in grams as a number>,
+      "kcal_per_gram": <calories per gram as a decimal>,
+      "calories": <total calories for this item as a number>,
+      "calorie_range": [<low estimate>, <high estimate>],
+      "assumption": "brief plain-English description of what you assumed about portion and preparation"
+    }}
+  ],
+  "total_calories": <sum of all item calories>,
+  "total_calorie_range": [<sum of lows>, <sum of highs>]
+}}
+
+Meal description: {note}"""
 
     body = {
         "model": model,
         "messages": [
-            {
-                "role": "system",
-                "content": "Return strict JSON only. No markdown. No extra text.",
-            },
-            {
-                "role": "user",
-                "content": prompt,
-            },
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
         ],
-        "temperature": 0.2,
+        "temperature": 0.1,
         "response_format": {"type": "json_object"},
     }
 

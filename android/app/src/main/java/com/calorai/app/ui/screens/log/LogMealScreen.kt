@@ -218,6 +218,10 @@ private fun InputStep(
             }
         }
 
+        Spacer(modifier = Modifier.height(4.dp))
+
+        InputQualityHint(mealText = mealText)
+
         Spacer(modifier = Modifier.weight(1f))
 
         Button(
@@ -243,6 +247,95 @@ private fun InputStep(
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+private fun inputQualityLevel(text: String): Int {
+    if (text.isBlank()) return 0
+    var score = 0
+    val lower = text.lowercase()
+    if (text.length > 20) score++
+    if (Regex("""\d""").containsMatchIn(text)) score++
+    if (Regex("""(gram|g\b|ml|oz|cup|slice|piece|bowl|plate|serving|large|small|medium|big|half|whole)""").containsMatchIn(lower)) score++
+    if (Regex("""(fried|grilled|baked|boiled|steamed|raw|roasted|scrambled|poached|sautéed|sauteed)""").containsMatchIn(lower)) score++
+    if (text.split(",").size > 1 || text.split(" and ").size > 1) score++
+    return score.coerceIn(0, 4)
+}
+
+@Composable
+private fun InputQualityHint(mealText: String) {
+    val level = inputQualityLevel(mealText)
+
+    val animatedLevel by animateIntAsState(
+        targetValue = level,
+        animationSpec = tween(300),
+        label = "qualityLevel"
+    )
+
+    val (label, tip, color) = when {
+        mealText.isBlank() -> Triple("", "More detail = more accurate estimate. Include portions, cooking method, and specific foods.", OnSurfaceDim)
+        animatedLevel <= 1 -> Triple("Basic", "Try adding portion size — e.g. \"large bowl\" or \"200g\"", Color(0xFFFF6B35).copy(alpha = 0.8f))
+        animatedLevel <= 2 -> Triple("Good", "Add cooking method or brand for a tighter range", Color(0xFFFFB347))
+        animatedLevel <= 3 -> Triple("Detailed", "Great detail — the AI can estimate this precisely", Color(0xFF66BB6A))
+        else -> Triple("Very detailed", "Excellent — this will give the most accurate result", Color(0xFF00C48C))
+    }
+
+    val dotCount = if (mealText.isBlank()) 0 else animatedLevel.coerceAtLeast(1)
+
+    AnimatedContent(
+        targetState = mealText.isBlank(),
+        transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+        label = "hintVisibility"
+    ) { isBlank ->
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = Surface1),
+            elevation = CardDefaults.cardElevation(0.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lightbulb,
+                    contentDescription = null,
+                    tint = if (isBlank) OnSurfaceDim else color,
+                    modifier = Modifier.size(16.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    if (!isBlank && label.isNotEmpty()) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            repeat(4) { i ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(width = 18.dp, height = 4.dp)
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(if (i < dotCount) color else Surface3)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = color,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(3.dp))
+                    }
+                    Text(
+                        text = tip,
+                        style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -451,6 +544,27 @@ private fun ResultStep(
                         Text(
                             text = rangeText,
                             style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceDim)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(color = Surface2)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = OnSurfaceDim,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = "AI estimates can vary. The range above reflects uncertainty.",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = OnSurfaceDim,
+                                fontSize = 10.sp
+                            )
                         )
                     }
                 }
