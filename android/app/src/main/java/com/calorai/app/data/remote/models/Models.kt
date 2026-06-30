@@ -30,12 +30,26 @@ data class AuthResponse(
 data class UserProfile(
     @Json(name = "id") val id: String,
     @Json(name = "email") val email: String,
-    @Json(name = "calorie_goal") val calorieGoal: Int = 2000
+    @Json(name = "calorie_goal") val calorieGoal: Int = 2000,
+    @Json(name = "height_cm") val heightCm: Double? = null,
+    @Json(name = "age") val age: Int? = null,
+    @Json(name = "sex") val sex: String? = null,
+    @Json(name = "current_weight_kg") val currentWeightKg: Double? = null,
+    @Json(name = "goal_weight_kg") val goalWeightKg: Double? = null,
+    @Json(name = "weekly_goal_kg") val weeklyGoalKg: Double? = null,
+    @Json(name = "activity_level") val activityLevel: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class UpdateProfileRequest(
-    @Json(name = "calorie_goal") val calorieGoal: Int? = null
+    @Json(name = "calorie_goal") val calorieGoal: Int? = null,
+    @Json(name = "height_cm") val heightCm: Double? = null,
+    @Json(name = "age") val age: Int? = null,
+    @Json(name = "sex") val sex: String? = null,
+    @Json(name = "current_weight_kg") val currentWeightKg: Double? = null,
+    @Json(name = "goal_weight_kg") val goalWeightKg: Double? = null,
+    @Json(name = "weekly_goal_kg") val weeklyGoalKg: Double? = null,
+    @Json(name = "activity_level") val activityLevel: String? = null
 )
 
 // ─── AI Estimate ─────────────────────────────────────────────────────────────

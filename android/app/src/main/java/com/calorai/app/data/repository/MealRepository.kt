@@ -121,9 +121,9 @@ class MealRepository @Inject constructor(
         }
     }
 
-    suspend fun updateProfile(calorieGoal: Int?): ApiResult<UserProfile> {
+    suspend fun updateProfile(request: UpdateProfileRequest): ApiResult<UserProfile> {
         return try {
-            val response = apiService.updateProfile(UpdateProfileRequest(calorieGoal))
+            val response = apiService.updateProfile(request)
             if (response.isSuccessful) {
                 ApiResult.Success(response.body()!!)
             } else {

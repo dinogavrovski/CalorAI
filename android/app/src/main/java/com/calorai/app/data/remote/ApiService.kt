@@ -16,10 +16,10 @@ interface ApiService {
 
     // ── User ──────────────────────────────────────────────────────────────────
 
-    @GET("user/me")
+    @GET("user/profile")
     suspend fun getProfile(): Response<UserProfile>
 
-    @PATCH("user/me")
+    @PATCH("user/profile")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<UserProfile>
 
     // ── AI ────────────────────────────────────────────────────────────────────

@@ -89,7 +89,7 @@ fun CalorAINavGraph() {
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Login.route,
+            startDestination = Screen.Home.route, // TODO: restore Screen.Login.route before release
             modifier = Modifier.fillMaxSize(),
             enterTransition = { tabEnterTransition() },
             exitTransition = { tabExitTransition() },

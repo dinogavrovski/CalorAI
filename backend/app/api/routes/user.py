@@ -6,9 +6,11 @@ from app.db.database import get_db
 from app.dependencies.auth import get_current_user
 from app.models.meal_log import MealLog
 from app.models.saved_meal import SavedMeal
+from app.models.user import User
 from app.schemas.text_log import TextLogRequest
-from app.schemas.user import UserResponse
+from app.schemas.user import UserResponse, UpdateProfileRequest
 from app.services.text_calorie_estimator import estimate_from_text_note
+from app.services.tdee import calculate_tdee
 
 
 class SavedMealRequest(BaseModel):
@@ -42,6 +44,46 @@ def _serialize_meal_log(log: MealLog) -> dict:
 @router.get("/me", response_model=UserResponse)
 def me(current_user=Depends(get_current_user)):
     return current_user
+
+
+@router.get("/profile", response_model=UserResponse)
+def get_profile(current_user=Depends(get_current_user)):
+    return current_user
+
+
+@router.patch("/profile", response_model=UserResponse)
+def update_profile(
+    payload: UpdateProfileRequest,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # Re-fetch within this session so setattr + commit are on the same session
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    fields = ["height_cm", "age", "sex", "current_weight_kg", "goal_weight_kg", "weekly_goal_kg", "activity_level"]
+    for field in fields:
+        value = getattr(payload, field)
+        if value is not None:
+            setattr(user, field, value)
+
+    # Auto-calculate calorie goal if all biometrics are present
+    if all(getattr(user, f) is not None for f in ["current_weight_kg", "height_cm", "age", "sex", "activity_level"]):
+        user.calorie_goal = calculate_tdee(
+            weight_kg=user.current_weight_kg,
+            height_cm=user.height_cm,
+            age=user.age,
+            sex=user.sex,
+            activity_level=user.activity_level,
+            weekly_goal_kg=user.weekly_goal_kg or 0.0,
+        )
+    elif payload.calorie_goal is not None:
+        user.calorie_goal = payload.calorie_goal
+
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 @router.post("/meal-history")

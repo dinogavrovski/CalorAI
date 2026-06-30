@@ -25,8 +25,11 @@ class TokenDataStore @Inject constructor(
         val CALORIE_BIAS_KEY = floatPreferencesKey("calorie_bias")
     }
 
+    // TODO: remove DEV_TOKEN before release — bypasses login for local testing
+    private val DEV_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiZXhwIjoxODE0MzU0MzUwfQ.tP8X2PVa3UuvZza1KNQfuiiT23bE7ar567ud7mz-Vhs"
+
     val accessToken: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[ACCESS_TOKEN_KEY]
+        prefs[ACCESS_TOKEN_KEY] ?: DEV_TOKEN
     }
 
     val refreshToken: Flow<String?> = context.dataStore.data.map { prefs ->

@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 data class HomeUiState(
@@ -54,7 +56,9 @@ class HomeViewModel @Inject constructor(
             when (val historyResult = mealRepository.getMealHistory()) {
                 is ApiResult.Success -> {
                     val meals = historyResult.data
-                    val todayTotal = meals.sumOf { it.totalCalories }.toInt()
+                    val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                    val todayMeals = meals.filter { it.timestamp.startsWith(today) }
+                    val todayTotal = todayMeals.sumOf { it.totalCalories }.toInt()
                     _uiState.update {
                         it.copy(isLoading = false, recentMeals = meals.take(3), todayCalories = todayTotal)
                     }

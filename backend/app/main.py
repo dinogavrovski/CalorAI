@@ -17,6 +17,25 @@ load_dotenv(dotenv_path=PROJECT_ROOT / ".env")
 
 Base.metadata.create_all(bind=engine)
 
+# Add biometric columns to existing DBs that predate this migration
+_NEW_COLUMNS = [
+    ("height_cm", "REAL"),
+    ("age", "INTEGER"),
+    ("sex", "TEXT"),
+    ("current_weight_kg", "REAL"),
+    ("goal_weight_kg", "REAL"),
+    ("weekly_goal_kg", "REAL"),
+    ("activity_level", "TEXT"),
+    ("calorie_goal", "INTEGER DEFAULT 2000"),
+]
+with engine.connect() as _conn:
+    for _col, _type in _NEW_COLUMNS:
+        try:
+            _conn.execute(text(f"ALTER TABLE users ADD COLUMN {_col} {_type}"))
+            _conn.commit()
+        except Exception:
+            pass  # column already exists
+
 app = FastAPI(title="AI Calorie API")
 
 # Allow frontend preflight requests (OPTIONS) and authenticated API calls.
