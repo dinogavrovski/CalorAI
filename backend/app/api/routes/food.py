@@ -49,8 +49,8 @@ def get_barcode_product(barcode: str):
     p = data.get("product", {})
     nutriments = p.get("nutriments", {})
 
-    # Serving size — prefer product_quantity, fall back to serving_size string
-    serving_g = _safe_float(p.get("product_quantity") or p.get("serving_quantity"), 100.0)
+    # Serving size — use serving_quantity if available, otherwise fall back to 100g
+    serving_g = _safe_float(p.get("serving_quantity"), 0.0)
     if serving_g <= 0:
         serving_g = 100.0
 

@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -175,7 +176,7 @@ fun WeightScreen(
                     modifier = Modifier.align(Alignment.Center)
                 )
             } else {
-                WeightLineChart(entries = state.entries)
+                WeightLineChart(allEntries = state.entries, period = state.period)
             }
         }
 
@@ -218,7 +219,10 @@ fun WeightScreen(
 }
 
 @Composable
-private fun WeightLineChart(entries: List<WeightEntry>) {
+private fun WeightLineChart(allEntries: List<WeightEntry>, period: String) {
+    // Collapse to one point per day, keeping the last value logged that day
+    val entries = collapseDaily(allEntries)
+
     val animProgress by animateFloatAsState(
         targetValue = 1f,
         animationSpec = tween(700, easing = FastOutSlowInEasing),
@@ -226,73 +230,293 @@ private fun WeightLineChart(entries: List<WeightEntry>) {
     )
 
     val weights = entries.map { it.weightKg.toFloat() }
+    if (weights.isEmpty()) return
     val minW = (weights.min() - 1f).coerceAtLeast(0f)
     val maxW = weights.max() + 1f
-    val range = maxW - minW
+    val range = (maxW - minW).coerceAtLeast(1f)
 
     val lineColor = OrangeAccent
     val gridColor = Color(0xFF2A2A2A)
 
-    val dateLabels = entries.map { entry ->
-        try {
-            OffsetDateTime.parse(entry.loggedAt)
-                .format(DateTimeFormatter.ofPattern("d MMM"))
-        } catch (e: Exception) { "" }
+    // Fixed time axis (MyFitnessPal style): x-position maps to actual date,
+    // and tick labels are fixed intervals (days / weeks / 12 months).
+    val axis = buildTimeAxis(entries, period)
+    val points = axis.points   // list of (x-fraction 0..1, weight)
+    val ticks = axis.ticks     // list of (x-fraction 0..1, label)
+    val tickFont = if (period == "year") 8.sp else 9.sp
+
+    // Y-axis (kg) reference values, top → bottom
+    val yValues = listOf(maxW, minW + range * 0.66f, minW + range * 0.33f, minW)
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+            // Y-axis kg labels
+            Column(
+                modifier = Modifier.fillMaxHeight().padding(end = 8.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.End
+            ) {
+                yValues.forEach { v ->
+                    Text(
+                        "%.0f".format(v),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = OnSurfaceVariant, fontSize = 9.sp
+                        )
+                    )
+                }
+            }
+
+            androidx.compose.foundation.Canvas(
+                modifier = Modifier.fillMaxHeight().weight(1f)
+            ) {
+                val w = size.width
+                val chartH = size.height
+
+                listOf(0f, 0.33f, 0.66f, 1f).forEach { frac ->
+                    val y = chartH - chartH * frac
+                    drawLine(gridColor, Offset(0f, y), Offset(w, y), strokeWidth = 1.dp.toPx())
+                }
+
+                if (points.isEmpty()) return@Canvas
+
+                val pts = points.map { (fx, wt) ->
+                    val x = fx * w
+                    val y = chartH - chartH * ((wt - minW) / range).coerceIn(0f, 1f)
+                    Offset(x, y)
+                }
+
+                // Single data point → centered dot, no line
+                if (pts.size == 1) {
+                    val p = pts[0]
+                    drawCircle(lineColor, radius = 5.dp.toPx(), center = p)
+                    drawCircle(Color(0xFF1C1C1E), radius = 2.5.dp.toPx(), center = p)
+                    return@Canvas
+                }
+
+                val visiblePts = pts.map { Offset(it.x, it.y + (chartH - it.y) * (1f - animProgress)) }
+
+                val fillPath = Path().apply {
+                    moveTo(visiblePts.first().x, chartH)
+                    visiblePts.forEach { lineTo(it.x, it.y) }
+                    lineTo(visiblePts.last().x, chartH)
+                    close()
+                }
+                drawPath(fillPath, brush = Brush.verticalGradient(
+                    colors = listOf(lineColor.copy(alpha = 0.25f), Color.Transparent),
+                    startY = 0f, endY = chartH
+                ))
+
+                val linePath = Path().apply {
+                    moveTo(visiblePts.first().x, visiblePts.first().y)
+                    visiblePts.drop(1).forEach { lineTo(it.x, it.y) }
+                }
+                drawPath(linePath, color = lineColor,
+                    style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+
+                visiblePts.forEach { pt ->
+                    drawCircle(lineColor, radius = 4.dp.toPx(), center = pt)
+                    drawCircle(Color(0xFF1C1C1E), radius = 2.dp.toPx(), center = pt)
+                }
+            }
+        }
+
+        if (ticks.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            // start padding must match the y-axis column width so labels align to the canvas
+            val labelMod = Modifier.fillMaxWidth().padding(start = 32.dp)
+            if (period == "year") {
+                // 12 labels → angle them so they never overlap
+                AngledXAxisLabels(
+                    fractions = ticks.map { it.first },
+                    labels = ticks.map { it.second },
+                    fontSize = tickFont,
+                    modifier = labelMod
+                )
+            } else {
+                XAxisLabels(
+                    fractions = ticks.map { it.first },
+                    labels = ticks.map { it.second },
+                    fontSize = tickFont,
+                    modifier = labelMod
+                )
+            }
+        }
+    }
+}
+
+private class TimeAxis(
+    val points: List<Pair<Float, Float>>,   // (x-fraction 0..1, weight kg)
+    val ticks: List<Pair<Float, String>>    // (x-fraction 0..1, label)
+)
+
+/** Builds a fixed date-based x-axis ending today, MyFitnessPal-style. */
+private fun buildTimeAxis(entries: List<WeightEntry>, period: String): TimeAxis {
+    val today = java.time.LocalDate.now()
+    val daysBetween = { a: java.time.LocalDate, b: java.time.LocalDate ->
+        java.time.temporal.ChronoUnit.DAYS.between(a, b).toFloat()
     }
 
-    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-        val w = size.width
-        val h = size.height - 24.dp.toPx()  // leave room for labels
-        val n = entries.size
+    val start: java.time.LocalDate
+    val ticks: List<Pair<Float, String>>
 
-        // Horizontal grid lines
-        listOf(0f, 0.33f, 0.66f, 1f).forEach { frac ->
-            val y = h - h * frac
-            drawLine(gridColor, Offset(0f, y), Offset(w, y), strokeWidth = 1.dp.toPx())
+    when (period) {
+        "week" -> {
+            start = today.minusDays(6)                       // Mon..Sun (last 7 days)
+            val span = 6f
+            ticks = (0..6).map { i ->
+                val d = start.plusDays(i.toLong())
+                (i / span) to d.format(DateTimeFormatter.ofPattern("EEE"))
+            }
         }
-
-        if (n < 2) return@Canvas
-
-        val pts = weights.mapIndexed { i, wt ->
-            val x = if (n == 1) w / 2f else w * i / (n - 1).toFloat()
-            val y = h - h * ((wt - minW) / range).coerceIn(0f, 1f)
-            Offset(x, y)
+        "month" -> {
+            start = today.minusDays(28)                      // last 4 weeks
+            val span = 28f
+            ticks = (0..4).map { wk ->
+                val d = start.plusDays((wk * 7).toLong())
+                ((wk * 7) / span) to d.format(DateTimeFormatter.ofPattern("d MMM"))
+            }
         }
-
-        // Gradient fill under line
-        val visiblePts = pts.map { Offset(it.x, it.y + (h - it.y) * (1f - animProgress)) }
-        val path = Path().apply {
-            moveTo(visiblePts.first().x, h)
-            visiblePts.forEach { lineTo(it.x, it.y) }
-            lineTo(visiblePts.last().x, h)
-            close()
+        else -> {                                            // year: 12 months as M/yy (e.g. 8/25)
+            start = today.withDayOfMonth(1).minusMonths(11)
+            val span = daysBetween(start, today).coerceAtLeast(1f)
+            ticks = (0..11).map { m ->
+                val d = start.plusMonths(m.toLong())
+                (daysBetween(start, d) / span).coerceIn(0f, 1f) to
+                    "${d.monthValue}/${d.format(DateTimeFormatter.ofPattern("yy"))}"  // 8/25
+            }
         }
-        drawPath(path, brush = Brush.verticalGradient(
-            colors = listOf(lineColor.copy(alpha = 0.25f), Color.Transparent),
-            startY = 0f, endY = h
-        ))
+    }
 
-        // Line
-        val linePath = Path().apply {
-            moveTo(visiblePts.first().x, visiblePts.first().y)
-            visiblePts.drop(1).forEach { lineTo(it.x, it.y) }
+    val span = daysBetween(start, today).coerceAtLeast(1f)
+    val points = entries.mapNotNull { e ->
+        val d = parseLoggedDate(e.loggedAt) ?: return@mapNotNull null
+        val frac = (daysBetween(start, d) / span).coerceIn(0f, 1f)
+        frac to e.weightKg.toFloat()
+    }
+
+    return TimeAxis(points, ticks)
+}
+
+/** Robustly parses a logged_at string down to a LocalDate. */
+private fun parseLoggedDate(raw: String): java.time.LocalDate? = try {
+    OffsetDateTime.parse(raw).toLocalDate()
+} catch (e: Exception) {
+    try {
+        java.time.LocalDateTime.parse(raw).toLocalDate()
+    } catch (e2: Exception) {
+        try { java.time.LocalDate.parse(raw.take(10)) } catch (e3: Exception) { null }
+    }
+}
+
+/** One entry per calendar day (keeping the last logged that day), sorted oldest → newest. */
+private fun collapseDaily(entries: List<WeightEntry>): List<WeightEntry> =
+    entries
+        .sortedBy { it.loggedAt }          // ISO timestamps sort chronologically
+        .groupBy { it.loggedAt.take(10) }  // group by yyyy-MM-dd
+        .map { (_, sameDay) -> sameDay.last() }
+
+/** Robustly parses the many datetime string shapes the backend may return. */
+private fun formatLoggedAt(raw: String, pattern: String): String {
+    val fmt = DateTimeFormatter.ofPattern(pattern)
+    // Try full offset datetime, then local datetime, then plain date
+    return try {
+        OffsetDateTime.parse(raw).format(fmt)
+    } catch (e: Exception) {
+        try {
+            java.time.LocalDateTime.parse(raw).format(fmt)
+        } catch (e2: Exception) {
+            try {
+                java.time.LocalDate.parse(raw.take(10)).format(fmt)
+            } catch (e3: Exception) { "" }
         }
-        drawPath(linePath, color = lineColor,
-            style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+    }
+}
 
-        // Dots
-        visiblePts.forEachIndexed { i, pt ->
-            drawCircle(lineColor, radius = 4.dp.toPx(), center = pt)
-            drawCircle(Color(0xFF1C1C1E), radius = 2.dp.toPx(), center = pt)
+/** Places each label horizontally centered on its data point's x-fraction (0f..1f). */
+@Composable
+private fun XAxisLabels(
+    fractions: List<Float>,
+    labels: List<String>,
+    modifier: Modifier = Modifier,
+    fontSize: androidx.compose.ui.unit.TextUnit = 9.sp
+) {
+    Layout(
+        modifier = modifier,
+        content = {
+            labels.forEach { text ->
+                Text(
+                    text,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = OnSurfaceVariant, fontSize = fontSize
+                    )
+                )
+            }
+        }
+    ) { measurables, constraints ->
+        val placeables = measurables.map { it.measure(constraints.copy(minWidth = 0)) }
+        val height = placeables.maxOfOrNull { it.height } ?: 0
+        layout(constraints.maxWidth, height) {
+            placeables.forEachIndexed { i, p ->
+                val frac = fractions.getOrElse(i) { 0f }
+                val x = (frac * constraints.maxWidth - p.width / 2f).toInt()
+                    .coerceIn(0, (constraints.maxWidth - p.width).coerceAtLeast(0))
+                p.placeRelative(x, 0)
+            }
+        }
+    }
+}
+
+/** Like XAxisLabels but each label is rotated, so many labels (e.g. 12 months) never overlap. */
+@Composable
+private fun AngledXAxisLabels(
+    fractions: List<Float>,
+    labels: List<String>,
+    modifier: Modifier = Modifier,
+    angleDeg: Float = -38f,
+    fontSize: androidx.compose.ui.unit.TextUnit = 9.sp
+) {
+    Layout(
+        modifier = modifier,
+        content = {
+            labels.forEach { text ->
+                Text(
+                    text,
+                    maxLines = 1,
+                    softWrap = false,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = OnSurfaceVariant, fontSize = fontSize
+                    )
+                )
+            }
+        }
+    ) { measurables, constraints ->
+        val placeables = measurables.map { it.measure(androidx.compose.ui.unit.Constraints()) }
+        val maxW = placeables.maxOfOrNull { it.width } ?: 0
+        val maxH = placeables.maxOfOrNull { it.height } ?: 0
+        val rad = Math.toRadians(kotlin.math.abs(angleDeg).toDouble())
+        // vertical space the rotated text occupies
+        val boxH = (maxW * kotlin.math.sin(rad) + maxH * kotlin.math.cos(rad)).toInt()
+        layout(constraints.maxWidth, boxH) {
+            placeables.forEachIndexed { i, p ->
+                val frac = fractions.getOrElse(i) { 0f }
+                val cx = frac * constraints.maxWidth
+                // rotate about the label's own center, centered vertically → nothing clipped
+                p.placeRelativeWithLayer(
+                    x = (cx - p.width / 2f).toInt(),
+                    y = ((boxH - p.height) / 2f).toInt()
+                ) {
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
+                    rotationZ = angleDeg
+                }
+            }
         }
     }
 }
 
 @Composable
 private fun WeightRow(entry: WeightEntry) {
-    val date = try {
-        OffsetDateTime.parse(entry.loggedAt).format(DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm"))
-    } catch (e: Exception) { entry.loggedAt.take(10) }
+    val date = formatLoggedAt(entry.loggedAt, "d MMM yyyy").ifEmpty { entry.loggedAt.take(10) }
 
     Row(
         modifier = Modifier

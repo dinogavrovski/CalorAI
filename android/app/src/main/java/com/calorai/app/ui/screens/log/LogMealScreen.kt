@@ -35,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.calorai.app.data.remote.models.EstimateResponse
 import com.calorai.app.data.remote.models.FoodItem
 import com.calorai.app.data.remote.models.SavedMeal
+import com.calorai.app.ui.components.AppIcons
 import com.calorai.app.ui.theme.*
 import kotlinx.coroutines.delay
 
@@ -316,7 +317,7 @@ private fun NotesInputScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Default.QrCodeScanner,
+                    AppIcons.Barcode,
                     contentDescription = "Scan barcode",
                     tint = OrangeAccent,
                     modifier = Modifier.size(24.dp)

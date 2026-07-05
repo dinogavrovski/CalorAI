@@ -24,8 +24,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.QrCodeScanner
 import com.calorai.app.ui.components.AppIcons
 import com.calorai.app.ui.screens.auth.LoginScreen
 import com.calorai.app.ui.screens.auth.RegisterScreen
@@ -34,6 +32,7 @@ import com.calorai.app.ui.screens.home.HomeScreen
 import com.calorai.app.ui.screens.log.LogMealScreen
 import com.calorai.app.ui.screens.profile.ProfileScreen
 import com.calorai.app.ui.screens.barcode.BarcodeScannerScreen
+import com.calorai.app.ui.screens.barcode.ProductDetailScreen
 import com.calorai.app.ui.screens.weight.WeightScreen
 import com.calorai.app.ui.theme.Background
 import com.calorai.app.ui.theme.OrangeAccent
@@ -52,6 +51,9 @@ sealed class Screen(val route: String) {
     object Profile : Screen("profile")
     object Weight : Screen("weight")
     object BarcodeScanner : Screen("barcode_scanner")
+    object ProductDetail : Screen("product_detail/{barcode}") {
+        fun route(barcode: String) = "product_detail/${java.net.URLEncoder.encode(barcode, "UTF-8")}"
+    }
 }
 
 // Routes that show the bottom nav
@@ -139,6 +141,31 @@ fun CalorAINavGraph() {
 
             composable(Screen.BarcodeScanner.route) {
                 BarcodeScannerScreen(
+                    onDismiss = { navController.popBackStack() },
+                    onBarcodeFound = { barcode ->
+                        navController.navigate(Screen.ProductDetail.route(barcode))
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.ProductDetail.route,
+                arguments = listOf(androidx.navigation.navArgument("barcode") { type = androidx.navigation.NavType.StringType }),
+                enterTransition = {
+                    slideInVertically(initialOffsetY = { it }, animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessLow)) + fadeIn(tween(380))
+                },
+                exitTransition = {
+                    slideOutVertically(targetOffsetY = { it }, animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium)) + fadeOut(tween(250))
+                },
+                popExitTransition = {
+                    slideOutVertically(targetOffsetY = { it }, animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium)) + fadeOut(tween(250))
+                }
+            ) { backStackEntry ->
+                val barcode = java.net.URLDecoder.decode(
+                    backStackEntry.arguments?.getString("barcode") ?: "", "UTF-8"
+                )
+                ProductDetailScreen(
+                    barcode = barcode,
                     onDismiss = { navController.popBackStack() },
                     onProductLogged = {
                         navController.navigate(Screen.Home.route) {
@@ -288,26 +315,12 @@ private fun FloatingPillNav(
             }
             Spacer(modifier = Modifier.width(4.dp))
 
-            // Barcode scan button
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF333333))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onScanBarcode
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.QrCodeScanner,
-                    contentDescription = "Scan Barcode",
-                    tint = OrangeAccent,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+            NavPillItem(
+                icon = AppIcons.Barcode,
+                label = "Scan",
+                selected = false,
+                onClick = onScanBarcode
+            )
 
             NavPillItem(
                 icon = AppIcons.Profile,

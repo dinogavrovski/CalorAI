@@ -528,4 +528,81 @@ object AppIcons {
             moveTo(13f, 7f); lineTo(17f, 11f)
         }
     }.build()
+
+    val Barcode: ImageVector get() = ImageVector.Builder(
+        name = "Barcode", defaultWidth = 24.dp, defaultHeight = 24.dp,
+        viewportWidth = 24f, viewportHeight = 24f
+    ).apply {
+        // Corner brackets — top-left
+        path(
+            stroke = SolidColor(Color.White), strokeLineWidth = 1.6f,
+            strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
+            fillAlpha = 0f, fill = SolidColor(Color.Transparent)
+        ) {
+            moveTo(3f, 8f); lineTo(3f, 3f); lineTo(8f, 3f)
+        }
+        // top-right
+        path(
+            stroke = SolidColor(Color.White), strokeLineWidth = 1.6f,
+            strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
+            fillAlpha = 0f, fill = SolidColor(Color.Transparent)
+        ) {
+            moveTo(16f, 3f); lineTo(21f, 3f); lineTo(21f, 8f)
+        }
+        // bottom-left
+        path(
+            stroke = SolidColor(Color.White), strokeLineWidth = 1.6f,
+            strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
+            fillAlpha = 0f, fill = SolidColor(Color.Transparent)
+        ) {
+            moveTo(3f, 16f); lineTo(3f, 21f); lineTo(8f, 21f)
+        }
+        // bottom-right
+        path(
+            stroke = SolidColor(Color.White), strokeLineWidth = 1.6f,
+            strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
+            fillAlpha = 0f, fill = SolidColor(Color.Transparent)
+        ) {
+            moveTo(16f, 21f); lineTo(21f, 21f); lineTo(21f, 16f)
+        }
+        // Barcode lines inside — tall center bar
+        path(
+            stroke = SolidColor(Color.White), strokeLineWidth = 1.8f,
+            strokeLineCap = StrokeCap.Round,
+            fillAlpha = 0f, fill = SolidColor(Color.Transparent)
+        ) {
+            moveTo(12f, 7f); lineTo(12f, 17f)
+        }
+        // thin left bar
+        path(
+            stroke = SolidColor(Color.White), strokeLineWidth = 1.1f,
+            strokeLineCap = StrokeCap.Round,
+            fillAlpha = 0f, fill = SolidColor(Color.Transparent)
+        ) {
+            moveTo(8.5f, 7f); lineTo(8.5f, 17f)
+        }
+        // thin right bar
+        path(
+            stroke = SolidColor(Color.White), strokeLineWidth = 1.1f,
+            strokeLineCap = StrokeCap.Round,
+            fillAlpha = 0f, fill = SolidColor(Color.Transparent)
+        ) {
+            moveTo(15.5f, 7f); lineTo(15.5f, 17f)
+        }
+        // extra thin bars
+        path(
+            stroke = SolidColor(Color.White), strokeLineWidth = 0.8f,
+            strokeLineCap = StrokeCap.Round,
+            fillAlpha = 0f, fill = SolidColor(Color.Transparent)
+        ) {
+            moveTo(10f, 7.5f); lineTo(10f, 16.5f)
+        }
+        path(
+            stroke = SolidColor(Color.White), strokeLineWidth = 0.8f,
+            strokeLineCap = StrokeCap.Round,
+            fillAlpha = 0f, fill = SolidColor(Color.Transparent)
+        ) {
+            moveTo(14f, 7.5f); lineTo(14f, 16.5f)
+        }
+    }.build()
 }

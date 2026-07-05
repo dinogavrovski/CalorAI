@@ -460,7 +460,7 @@ private fun WeightGraphCard(
             Spacer(modifier = Modifier.height(16.dp))
 
             if (entries.size >= 2) {
-                WeightLineChart(entries = entries)
+                WeightLineChart(allEntries = entries)
             } else {
                 Box(
                     modifier = Modifier
@@ -488,8 +488,14 @@ private fun WeightGraphCard(
 
 @Composable
 private fun WeightLineChart(
-    entries: List<com.calorai.app.data.remote.models.WeightEntry>
+    allEntries: List<com.calorai.app.data.remote.models.WeightEntry>
 ) {
+    // Collapse to one point per day, keeping the last value logged that day
+    val entries = allEntries
+        .sortedBy { it.loggedAt }
+        .groupBy { it.loggedAt.take(10) }
+        .map { (_, sameDay) -> sameDay.last() }
+
     if (entries.isEmpty()) return
 
     val weights = entries.map { it.weightKg.toFloat() }
@@ -510,13 +516,12 @@ private fun WeightLineChart(
     val yLabels = listOf(maxW, (minW + maxW) / 2f, minW)
     val xLabelFormatter = DateTimeFormatter.ofPattern("d MMM")
 
-    val xLabels = if (entries.size >= 3) {
-        listOf(entries.first(), entries[entries.size / 2], entries.last())
-    } else {
-        listOf(entries.first(), entries.last())
-    }.map { entry ->
-        try { OffsetDateTime.parse(entry.loggedAt).format(xLabelFormatter) } catch (e: Exception) { "" }
-    }
+    val n = entries.size
+    val allXLabels = entries.map { entry -> formatLoggedAtDate(entry.loggedAt, xLabelFormatter) }
+    // Show up to 4 evenly-spaced labels, always including the last point
+    val maxXLabels = 4
+    val xStep = if (n <= maxXLabels) 1 else kotlin.math.ceil(n.toDouble() / maxXLabels).toInt()
+    val xLabelIndices = (0 until n).filter { i -> i % xStep == 0 || i == n - 1 }
 
     Column {
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -545,10 +550,20 @@ private fun WeightLineChart(
                 val w = size.width
                 val h = size.height
                 val n = weights.size
-                if (n < 2) return@Canvas
+                if (n == 0) return@Canvas
+
+                fun yOf(v: Float) = h - ((v - minW) / range) * h * 0.85f - h * 0.075f
+
+                // Single data point → centered dot only
+                if (n == 1) {
+                    val cx = w / 2f
+                    val cy = yOf(weights[0])
+                    drawCircle(color = Color.White, radius = 5f, center = Offset(cx, cy))
+                    drawCircle(color = lineColor, radius = 3f, center = Offset(cx, cy))
+                    return@Canvas
+                }
 
                 fun xOf(i: Int) = i / (n - 1f) * w
-                fun yOf(v: Float) = h - ((v - minW) / range) * h * 0.85f - h * 0.075f
 
                 val animN = (n * animProgress).toInt().coerceAtLeast(2).coerceAtMost(n)
 
@@ -594,21 +609,63 @@ private fun WeightLineChart(
             }
         }
 
-        // X-axis date labels
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 40.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            xLabels.forEach { label ->
+        // X-axis date labels, aligned under their data points
+        if (n >= 1) {
+            Spacer(modifier = Modifier.height(4.dp))
+            XAxisDateLabels(
+                fractions = xLabelIndices.map { if (n == 1) 0.5f else it / (n - 1).toFloat() },
+                labels = xLabelIndices.map { allXLabels[it] },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 40.dp)
+            )
+        }
+    }
+}
+
+/** Robustly parses the various datetime string shapes the backend may return. */
+private fun formatLoggedAtDate(raw: String, fmt: DateTimeFormatter): String =
+    try {
+        OffsetDateTime.parse(raw).format(fmt)
+    } catch (e: Exception) {
+        try {
+            java.time.LocalDateTime.parse(raw).format(fmt)
+        } catch (e2: Exception) {
+            try {
+                java.time.LocalDate.parse(raw.take(10)).format(fmt)
+            } catch (e3: Exception) { "" }
+        }
+    }
+
+/** Positions each date label centered under its data point's x-fraction (0f..1f). */
+@Composable
+private fun XAxisDateLabels(
+    fractions: List<Float>,
+    labels: List<String>,
+    modifier: Modifier = Modifier
+) {
+    androidx.compose.ui.layout.Layout(
+        modifier = modifier,
+        content = {
+            labels.forEach { text ->
                 Text(
-                    label,
+                    text,
+                    maxLines = 1,
                     style = MaterialTheme.typography.labelSmall.copy(
                         color = OnSurfaceDim, fontSize = 9.sp
                     )
                 )
+            }
+        }
+    ) { measurables, constraints ->
+        val placeables = measurables.map { it.measure(constraints.copy(minWidth = 0)) }
+        val height = placeables.maxOfOrNull { it.height } ?: 0
+        layout(constraints.maxWidth, height) {
+            placeables.forEachIndexed { i, p ->
+                val frac = fractions.getOrElse(i) { 0f }
+                val x = (frac * constraints.maxWidth - p.width / 2f).toInt()
+                    .coerceIn(0, (constraints.maxWidth - p.width).coerceAtLeast(0))
+                p.placeRelative(x, 0)
             }
         }
     }
