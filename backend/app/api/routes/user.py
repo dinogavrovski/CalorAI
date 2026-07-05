@@ -23,6 +23,14 @@ class QuickLogRequest(BaseModel):
     calories: float
 
 
+class BarcodeLogRequest(BaseModel):
+    note: str
+    total_calories: float
+    total_protein_g: float = 0.0
+    total_carbs_g: float = 0.0
+    total_fat_g: float = 0.0
+
+
 router = APIRouter(prefix="/user", tags=["User"])
 
 
@@ -212,6 +220,39 @@ def quick_log_meal(
         total_calories=float(payload.calories),
         total_calorie_low=float(payload.calories),
         total_calorie_high=float(payload.calories),
+    )
+    db.add(meal_log)
+    db.commit()
+    db.refresh(meal_log)
+    return _serialize_meal_log(meal_log)
+
+
+@router.post("/meal-history/barcode")
+def barcode_log_meal(
+    payload: BarcodeLogRequest,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Log a meal from barcode scan — skips AI estimation, uses provided nutrition data."""
+    if payload.total_calories <= 0:
+        raise HTTPException(status_code=422, detail="total_calories must be positive")
+    item = {
+        "note_part": payload.note,
+        "parsed_food": payload.note,
+        "calories": payload.total_calories,
+        "calorie_range": [payload.total_calories * 0.95, payload.total_calories * 1.05],
+        "protein_g": payload.total_protein_g,
+        "carbs_g": payload.total_carbs_g,
+        "fat_g": payload.total_fat_g,
+        "nutrition_source": "barcode",
+    }
+    meal_log = MealLog(
+        user_id=current_user.id,
+        note=payload.note,
+        items_json=[item],
+        total_calories=float(payload.total_calories),
+        total_calorie_low=float(payload.total_calories * 0.95),
+        total_calorie_high=float(payload.total_calories * 1.05),
     )
     db.add(meal_log)
     db.commit()

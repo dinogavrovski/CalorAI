@@ -26,7 +26,7 @@ class TokenDataStore @Inject constructor(
     }
 
     // TODO: remove DEV_TOKEN before release — bypasses login for local testing
-    private val DEV_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiZXhwIjoxODE0MzU0MzUwfQ.tP8X2PVa3UuvZza1KNQfuiiT23bE7ar567ud7mz-Vhs"
+    private val DEV_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiZXhwIjoxODE0NzkwNzg4fQ.zBHWj90i7Q1K_HJScxYJESSVE8VvnaHc1eQV-6cZyEA"
 
     val accessToken: Flow<String?> = context.dataStore.data.map { prefs ->
         prefs[ACCESS_TOKEN_KEY] ?: DEV_TOKEN

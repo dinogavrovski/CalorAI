@@ -128,6 +128,33 @@ data class QuickLogRequest(
     @Json(name = "calories") val calories: Double
 )
 
+// ─── Barcode log request ─────────────────────────────────────────────────────
+
+@JsonClass(generateAdapter = true)
+data class BarcodeLogRequest(
+    @Json(name = "note") val note: String,
+    @Json(name = "total_calories") val totalCalories: Float,
+    @Json(name = "total_protein_g") val totalProteinG: Float = 0f,
+    @Json(name = "total_carbs_g") val totalCarbsG: Float = 0f,
+    @Json(name = "total_fat_g") val totalFatG: Float = 0f
+)
+
+// ─── Barcode ─────────────────────────────────────────────────────────────────
+
+@JsonClass(generateAdapter = true)
+data class BarcodeProduct(
+    @Json(name = "barcode") val barcode: String,
+    @Json(name = "name") val name: String,
+    @Json(name = "brand") val brand: String? = null,
+    @Json(name = "serving_size_g") val servingSizeG: Float,
+    @Json(name = "serving_description") val servingDescription: String? = null,
+    @Json(name = "calories_per_serving") val caloriesPerServing: Float,
+    @Json(name = "protein_g") val proteinG: Float,
+    @Json(name = "carbs_g") val carbsG: Float,
+    @Json(name = "fat_g") val fatG: Float,
+    @Json(name = "image_url") val imageUrl: String? = null
+)
+
 // ─── Weight ──────────────────────────────────────────────────────────────────
 
 @JsonClass(generateAdapter = true)

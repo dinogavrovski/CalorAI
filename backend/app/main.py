@@ -8,6 +8,7 @@ from fastapi.openapi.utils import get_openapi
 from sqlalchemy import text
 from app.api.routes import ai, auth, user as user_router
 from app.api.routes import weight as weight_router
+from app.api.routes import food as food_router
 from app.db.database import engine
 from app.db.base import Base
 from app.models import meal_log, refresh_session, saved_meal, user, weight_log  # noqa: F401
@@ -59,6 +60,7 @@ app.include_router(auth.router)
 app.include_router(user_router.router)
 app.include_router(ai.router)
 app.include_router(weight_router.router)
+app.include_router(food_router.router)
 
 
 def _visible_swagger_paths() -> set[str]:

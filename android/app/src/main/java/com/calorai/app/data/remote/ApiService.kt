@@ -55,6 +55,14 @@ interface ApiService {
     @POST("user/meal-history/quick")
     suspend fun quickLogMeal(@Body request: QuickLogRequest): Response<MealLog>
 
+    // ── Food / Barcode ────────────────────────────────────────────────────────
+
+    @GET("food/barcode/{barcode}")
+    suspend fun getBarcodeProduct(@Path("barcode") barcode: String): Response<BarcodeProduct>
+
+    @POST("user/meal-history/barcode")
+    suspend fun logBarcodeProduct(@Body request: BarcodeLogRequest): Response<MealLog>
+
     // ── Weight ────────────────────────────────────────────────────────────────
 
     @POST("user/weight")

@@ -10,8 +10,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,6 +30,7 @@ import com.calorai.app.ui.components.CalorieProgressRing
 import com.calorai.app.ui.components.MacroCard
 import com.calorai.app.ui.theme.*
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
@@ -35,6 +41,7 @@ private val CardBorder = BorderStroke(1.dp, Color(0x14FFFFFF))
 @Composable
 fun HomeScreen(
     onLogMeal: () -> Unit,
+    onNavigateToWeight: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     paddingValues: PaddingValues = PaddingValues()
 ) {
@@ -255,8 +262,9 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // ── Weight badge ─────────────────────────────────────────────────────
-        WeightBadge(
+        // ── Weight graph card ────────────────────────────────────────────────
+        WeightGraphCard(
+            onNavigateToWeight = onNavigateToWeight,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
@@ -356,84 +364,311 @@ private fun CalendarStrip() {
 
 
 @Composable
-private fun WeightBadge(modifier: Modifier = Modifier) {
-    val viewModel: com.calorai.app.ui.screens.weight.WeightViewModel =
-        androidx.hilt.navigation.compose.hiltViewModel()
-    val state by viewModel.state.collectAsStateWithLifecycle()
+private fun WeightGraphCard(
+    onNavigateToWeight: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val weightViewModel: com.calorai.app.ui.screens.weight.WeightViewModel =
+        hiltViewModel()
+    val state by weightViewModel.state.collectAsStateWithLifecycle()
 
-    val weights = state.entries.map { it.weightKg.toFloat() }
+    val entries = state.entries
     val latest = state.latest
-    val trend = if (state.entries.size >= 2)
-        state.entries.last().weightKg - state.entries[state.entries.size - 2].weightKg
-    else null
 
-    Row(
+    Card(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .border(CardBorder, RoundedCornerShape(16.dp))
-            .background(Surface1)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .border(CardBorder, RoundedCornerShape(20.dp))
+            .clickable(onClick = onNavigateToWeight),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Surface1),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
-        // Left: icon + weight value + trend
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.weight(1f)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(OrangeContainer),
-                contentAlignment = Alignment.Center
+        Column(modifier = Modifier.padding(18.dp)) {
+            // Header row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("⚖", fontSize = 16.sp)
-            }
-            Column {
-                Text(
-                    "Weight",
-                    style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
-                )
-                if (latest != null) {
+                Column {
                     Row(
-                        verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(7.dp)
                     ) {
+                        Text("⚖", fontSize = 14.sp)
                         Text(
-                            "%.1f kg".format(latest.weightKg),
-                            style = MaterialTheme.typography.titleMedium.copy(
+                            "Weight",
+                            style = MaterialTheme.typography.titleSmall.copy(
                                 color = OnSurface, fontWeight = FontWeight.Bold
                             )
                         )
-                        if (trend != null) {
-                            val trendColor = if (trend <= 0) MacroFat else Color(0xFFFF5252)
+                    }
+                    Text(
+                        "Last 30 days",
+                        style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (latest != null) {
+                        val trend = if (entries.size >= 2)
+                            entries.last().weightKg - entries[entries.size - 2].weightKg
+                        else null
+
+                        Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = "${if (trend <= 0) "↓" else "↑"} ${"%.1f".format(Math.abs(trend))}",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = trendColor, fontWeight = FontWeight.SemiBold
-                                ),
-                                modifier = Modifier.padding(bottom = 2.dp)
+                                "%.1f kg".format(latest.weightKg),
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    color = OnSurface, fontWeight = FontWeight.ExtraBold
+                                )
                             )
+                            if (trend != null && trend != 0.0) {
+                                val trendColor = if (trend < 0) Color(0xFF4CAF50) else Color(0xFFFF5252)
+                                Text(
+                                    text = "${if (trend < 0) "↓" else "↑"} ${"%.1f".format(Math.abs(trend))} kg",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = trendColor, fontWeight = FontWeight.SemiBold
+                                    )
+                                )
+                            }
                         }
                     }
-                } else {
+
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(OrangeAccent.copy(alpha = 0.15f))
+                            .clickable(onClick = {
+                                weightViewModel.showSheet()
+                            }),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            AppIcons.Add,
+                            contentDescription = "Log weight",
+                            tint = OrangeAccent,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (entries.size >= 2) {
+                WeightLineChart(entries = entries)
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        "Not logged yet",
+                        "Log your weight to see progress",
                         style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceDim)
                     )
                 }
             }
         }
+    }
 
-        // Right: sparkline
-        if (weights.size >= 2) {
-            Box(
+    // Weight input sheet
+    if (state.showInputSheet) {
+        WeightInputSheet(
+            onDismiss = { weightViewModel.hideSheet() },
+            onConfirm = { kg -> weightViewModel.logWeight(kg) }
+        )
+    }
+}
+
+@Composable
+private fun WeightLineChart(
+    entries: List<com.calorai.app.data.remote.models.WeightEntry>
+) {
+    if (entries.isEmpty()) return
+
+    val weights = entries.map { it.weightKg.toFloat() }
+    val minW = weights.min()
+    val maxW = weights.max()
+    val range = (maxW - minW).coerceAtLeast(1f)
+
+    val animProgress by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+        label = "chartAnim"
+    )
+
+    val lineColor = OrangeAccent
+    val gradientTop = OrangeAccent.copy(alpha = 0.3f)
+    val gradientBot = OrangeAccent.copy(alpha = 0f)
+
+    val yLabels = listOf(maxW, (minW + maxW) / 2f, minW)
+    val xLabelFormatter = DateTimeFormatter.ofPattern("d MMM")
+
+    val xLabels = if (entries.size >= 3) {
+        listOf(entries.first(), entries[entries.size / 2], entries.last())
+    } else {
+        listOf(entries.first(), entries.last())
+    }.map { entry ->
+        try { OffsetDateTime.parse(entry.loggedAt).format(xLabelFormatter) } catch (e: Exception) { "" }
+    }
+
+    Column {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            // Y-axis labels
+            Column(
                 modifier = Modifier
-                    .width(110.dp)
-                    .height(48.dp)
+                    .width(40.dp)
+                    .height(100.dp),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                com.calorai.app.ui.components.WeightSparkline(weights = weights)
+                yLabels.forEach { label ->
+                    Text(
+                        "%.0f".format(label),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = OnSurfaceDim, fontSize = 9.sp
+                        )
+                    )
+                }
+            }
+
+            androidx.compose.foundation.Canvas(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(100.dp)
+            ) {
+                val w = size.width
+                val h = size.height
+                val n = weights.size
+                if (n < 2) return@Canvas
+
+                fun xOf(i: Int) = i / (n - 1f) * w
+                fun yOf(v: Float) = h - ((v - minW) / range) * h * 0.85f - h * 0.075f
+
+                val animN = (n * animProgress).toInt().coerceAtLeast(2).coerceAtMost(n)
+
+                // Gradient fill path
+                val fillPath = Path().apply {
+                    moveTo(xOf(0), yOf(weights[0]))
+                    for (i in 1 until animN) {
+                        val cx = (xOf(i - 1) + xOf(i)) / 2f
+                        cubicTo(cx, yOf(weights[i - 1]), cx, yOf(weights[i]), xOf(i), yOf(weights[i]))
+                    }
+                    lineTo(xOf(animN - 1), h)
+                    lineTo(xOf(0), h)
+                    close()
+                }
+                drawPath(
+                    fillPath,
+                    brush = Brush.verticalGradient(
+                        listOf(gradientTop, gradientBot),
+                        startY = 0f,
+                        endY = h
+                    )
+                )
+
+                // Line path
+                val linePath = Path().apply {
+                    moveTo(xOf(0), yOf(weights[0]))
+                    for (i in 1 until animN) {
+                        val cx = (xOf(i - 1) + xOf(i)) / 2f
+                        cubicTo(cx, yOf(weights[i - 1]), cx, yOf(weights[i]), xOf(i), yOf(weights[i]))
+                    }
+                }
+                drawPath(
+                    linePath,
+                    color = lineColor,
+                    style = Stroke(width = 2.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
+
+                // Dot on latest point
+                val lastX = xOf(animN - 1)
+                val lastY = yOf(weights[animN - 1])
+                drawCircle(color = Color.White, radius = 5f, center = Offset(lastX, lastY))
+                drawCircle(color = lineColor, radius = 3f, center = Offset(lastX, lastY))
+            }
+        }
+
+        // X-axis date labels
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 40.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            xLabels.forEach { label ->
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = OnSurfaceDim, fontSize = 9.sp
+                    )
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WeightInputSheet(
+    onDismiss: () -> Unit,
+    onConfirm: (Double) -> Unit
+) {
+    var input by remember { mutableStateOf("") }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Surface2,
+        tonalElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            Text(
+                "Log Weight",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    color = OnSurface, fontWeight = FontWeight.Bold
+                )
+            )
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it.filter { c -> c.isDigit() || c == '.' } },
+                label = { Text("Weight (kg)") },
+                singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                ),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = OrangeAccent,
+                    focusedLabelColor = OrangeAccent,
+                    unfocusedBorderColor = OnSurfaceDim,
+                    unfocusedLabelColor = OnSurfaceDim,
+                    focusedTextColor = OnSurface,
+                    unfocusedTextColor = OnSurface
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Button(
+                onClick = {
+                    val kg = input.toDoubleOrNull()
+                    if (kg != null && kg > 0) onConfirm(kg)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = OrangeAccent),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Save", color = Color.White, fontWeight = FontWeight.Bold)
             }
         }
     }

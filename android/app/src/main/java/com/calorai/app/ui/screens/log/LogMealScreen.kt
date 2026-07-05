@@ -1,6 +1,7 @@
 package com.calorai.app.ui.screens.log
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -41,6 +42,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun LogMealScreen(
     onMealLogged: () -> Unit,
+    onScanBarcode: () -> Unit = {},
     viewModel: LogMealViewModel = hiltViewModel(),
     paddingValues: PaddingValues = PaddingValues()
 ) {
@@ -140,7 +142,8 @@ fun LogMealScreen(
                 errorMessage = uiState.errorMessage,
                 onSubmit = { viewModel.estimateMeal() },
                 onOpenSavedMeals = { showSavedMeals = true },
-                hasSavedMeals = uiState.savedMeals.isNotEmpty()
+                hasSavedMeals = uiState.savedMeals.isNotEmpty(),
+                onScanBarcode = onScanBarcode
             )
         }
     }
@@ -156,7 +159,8 @@ private fun NotesInputScreen(
     errorMessage: String?,
     onSubmit: () -> Unit,
     onOpenSavedMeals: () -> Unit,
-    hasSavedMeals: Boolean
+    hasSavedMeals: Boolean,
+    onScanBarcode: () -> Unit = {}
 ) {
     val focusRequester = remember { FocusRequester() }
     val qualityLevel = inputQualityLevel(mealText)
@@ -280,27 +284,44 @@ private fun NotesInputScreen(
             }
         }
 
-        // Analyze button
-        Button(
-            onClick = onSubmit,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            enabled = mealText.isNotBlank() && !isThinking,
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = OrangeAccent,
-                contentColor = Color.White,
-                disabledContainerColor = OrangeAccent.copy(alpha = 0.25f),
-                disabledContentColor = Color.White.copy(alpha = 0.4f)
-            )
+        // Analyze + Scan row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                "Analyze",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
-            )
+            Button(
+                onClick = onSubmit,
+                modifier = Modifier.weight(1f).height(56.dp),
+                enabled = mealText.isNotBlank() && !isThinking,
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = OrangeAccent,
+                    contentColor = Color.White,
+                    disabledContainerColor = OrangeAccent.copy(alpha = 0.25f),
+                    disabledContentColor = Color.White.copy(alpha = 0.4f)
+                )
+            ) {
+                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Analyze", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+            }
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Surface1)
+                    .border(BorderStroke(1.dp, Color(0x22FFFFFF)), RoundedCornerShape(16.dp))
+                    .clickable(onClick = onScanBarcode),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.QrCodeScanner,
+                    contentDescription = "Scan barcode",
+                    tint = OrangeAccent,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
         Spacer(modifier = Modifier.height(20.dp))
     }

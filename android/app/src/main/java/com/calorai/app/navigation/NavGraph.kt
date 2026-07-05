@@ -24,6 +24,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCodeScanner
 import com.calorai.app.ui.components.AppIcons
 import com.calorai.app.ui.screens.auth.LoginScreen
 import com.calorai.app.ui.screens.auth.RegisterScreen
@@ -31,6 +33,8 @@ import com.calorai.app.ui.screens.history.HistoryScreen
 import com.calorai.app.ui.screens.home.HomeScreen
 import com.calorai.app.ui.screens.log.LogMealScreen
 import com.calorai.app.ui.screens.profile.ProfileScreen
+import com.calorai.app.ui.screens.barcode.BarcodeScannerScreen
+import com.calorai.app.ui.screens.weight.WeightScreen
 import com.calorai.app.ui.theme.Background
 import com.calorai.app.ui.theme.OrangeAccent
 import com.calorai.app.ui.theme.OnSurfaceDim
@@ -46,6 +50,8 @@ sealed class Screen(val route: String) {
     object LogMeal : Screen("log_meal")
     object History : Screen("history")
     object Profile : Screen("profile")
+    object Weight : Screen("weight")
+    object BarcodeScanner : Screen("barcode_scanner")
 }
 
 // Routes that show the bottom nav
@@ -82,7 +88,8 @@ fun CalorAINavGraph() {
                             }
                         }
                     },
-                    onLogMeal = { navController.navigate(Screen.LogMeal.route) }
+                    onLogMeal = { navController.navigate(Screen.LogMeal.route) },
+                    onScanBarcode = { navController.navigate(Screen.BarcodeScanner.route) }
                 )
             }
         }
@@ -121,7 +128,23 @@ fun CalorAINavGraph() {
             composable(Screen.Home.route) {
                 HomeScreen(
                     onLogMeal = { navController.navigate(Screen.LogMeal.route) },
+                    onNavigateToWeight = { navController.navigate(Screen.Weight.route) },
                     paddingValues = padding
+                )
+            }
+
+            composable(Screen.Weight.route) {
+                WeightScreen(paddingValues = padding)
+            }
+
+            composable(Screen.BarcodeScanner.route) {
+                BarcodeScannerScreen(
+                    onDismiss = { navController.popBackStack() },
+                    onProductLogged = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
+                    }
                 )
             }
 
@@ -171,6 +194,7 @@ fun CalorAINavGraph() {
                             popUpTo(Screen.Home.route) { inclusive = true }
                         }
                     },
+                    onScanBarcode = { navController.navigate(Screen.BarcodeScanner.route) },
                     paddingValues = padding
                 )
             }
@@ -204,7 +228,8 @@ private fun tabExitTransition(): ExitTransition =
 private fun FloatingPillNav(
     activeRoute: String,
     onNavigate: (String) -> Unit,
-    onLogMeal: () -> Unit
+    onLogMeal: () -> Unit,
+    onScanBarcode: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -262,6 +287,27 @@ private fun FloatingPillNav(
                 )
             }
             Spacer(modifier = Modifier.width(4.dp))
+
+            // Barcode scan button
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF333333))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onScanBarcode
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.QrCodeScanner,
+                    contentDescription = "Scan Barcode",
+                    tint = OrangeAccent,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
 
             NavPillItem(
                 icon = AppIcons.Profile,
