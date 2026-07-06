@@ -138,35 +138,38 @@ object AppIcons {
         }
     }.build()
 
+    // Solid filled flame with an inner-flame cutout (even-odd). Tinted by Icon(tint=…).
     val Flame: ImageVector get() = ImageVector.Builder(
         name = "Flame", defaultWidth = 24.dp, defaultHeight = 24.dp,
         viewportWidth = 24f, viewportHeight = 24f
     ).apply {
         path(
-            stroke = SolidColor(Color(0xFFFF5C00)), strokeLineWidth = 1.6f,
-            strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
-            fillAlpha = 0f, fill = SolidColor(Color.Transparent)
+            fill = SolidColor(Color.Black),
+            pathFillType = PathFillType.EvenOdd
         ) {
-            moveTo(12f, 2f)
-            curveTo(12f, 2f, 14f, 6f, 13f, 9f)
-            curveTo(15f, 7f, 16f, 5f, 16f, 5f)
-            curveTo(16f, 5f, 19f, 9f, 18f, 14f)
-            curveTo(17.3f, 17.5f, 14.8f, 20f, 12f, 20f)
-            curveTo(9.2f, 20f, 6.7f, 17.5f, 6f, 14f)
-            curveTo(5f, 9f, 9f, 5f, 9f, 5f)
-            curveTo(9f, 5f, 9.5f, 8f, 11f, 9f)
-            curveTo(10f, 6f, 12f, 2f, 12f, 2f); close()
-        }
-        path(
-            stroke = SolidColor(Color(0xFFFF5C00)), strokeLineWidth = 1.4f,
-            strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
-            fillAlpha = 0f, fill = SolidColor(Color.Transparent)
-        ) {
-            moveTo(12f, 20f)
-            curveTo(10.5f, 20f, 9.5f, 18.5f, 10f, 17f)
-            curveTo(10.5f, 15.5f, 12f, 15f, 12f, 15f)
-            curveTo(12f, 15f, 13.5f, 15.5f, 14f, 17f)
-            curveTo(14.5f, 18.5f, 13.5f, 20f, 12f, 20f); close()
+            // ── Outer flame body ──
+            moveTo(13.2f, 2f)
+            // upper-right shoulder curling off the tip
+            curveTo(14.4f, 4.9f, 14.2f, 7.4f, 13.3f, 9.4f)
+            curveTo(14.5f, 8.7f, 15.3f, 7.4f, 15.6f, 5.9f)
+            // little secondary lobe out to the right, then down the right side
+            curveTo(17.6f, 7.9f, 19.2f, 10.9f, 19f, 14f)
+            curveTo(18.8f, 18.1f, 15.7f, 21.5f, 11.9f, 21.5f)
+            // around the bottom and up the left side
+            curveTo(7.9f, 21.5f, 5f, 18.2f, 5f, 14.1f)
+            curveTo(5f, 10.2f, 7.7f, 7.1f, 9.4f, 4.7f)
+            // inner-left kink near the tip, then back up to the tip
+            curveTo(9.7f, 6.7f, 10.6f, 8.1f, 11.3f, 8.8f)
+            curveTo(10.7f, 6.1f, 11.6f, 3.8f, 13.2f, 2f)
+            close()
+
+            // ── Inner flame cutout ──
+            moveTo(11.9f, 20f)
+            curveTo(10.2f, 20f, 8.9f, 18.6f, 9.1f, 16.8f)
+            curveTo(9.3f, 15.1f, 10.7f, 13.8f, 11.5f, 12.2f)
+            curveTo(12.3f, 13.8f, 13.7f, 15.2f, 14.4f, 16.8f)
+            curveTo(15.1f, 18.5f, 13.8f, 20f, 11.9f, 20f)
+            close()
         }
     }.build()
 

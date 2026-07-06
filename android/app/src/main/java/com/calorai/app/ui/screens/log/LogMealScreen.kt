@@ -1,5 +1,10 @@
 package com.calorai.app.ui.screens.log
 
+import android.app.Activity
+import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.core.*
@@ -34,6 +39,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.calorai.app.data.remote.models.EstimateResponse
 import com.calorai.app.data.remote.models.FoodItem
+import com.calorai.app.data.remote.models.LoggedBarcodeItem
 import com.calorai.app.data.remote.models.SavedMeal
 import com.calorai.app.ui.components.AppIcons
 import com.calorai.app.ui.theme.*
@@ -44,12 +50,21 @@ import kotlinx.coroutines.delay
 fun LogMealScreen(
     onMealLogged: () -> Unit,
     onScanBarcode: () -> Unit = {},
+    scannedItem: LoggedBarcodeItem? = null,
+    onScannedItemConsumed: () -> Unit = {},
     viewModel: LogMealViewModel = hiltViewModel(),
     paddingValues: PaddingValues = PaddingValues()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val bias by viewModel.calorieBias.collectAsStateWithLifecycle()
     var showSavedMeals by remember { mutableStateOf(false) }
+
+    LaunchedEffect(scannedItem) {
+        if (scannedItem != null) {
+            viewModel.addBarcodeItem(scannedItem)
+            onScannedItemConsumed()
+        }
+    }
 
     LaunchedEffect(uiState.step) {
         if (uiState.step == LogStep.SUCCESS) {
@@ -114,7 +129,7 @@ fun LogMealScreen(
         ) {
             ResultSheet(
                 estimate = uiState.estimate!!,
-                mealText = uiState.mealText,
+                mealText = uiState.mealText.ifBlank { uiState.estimate!!.note },
                 bias = bias,
                 isSavingMeal = uiState.isSavingMeal,
                 mealSavedSuccess = uiState.mealSavedSuccess,
@@ -139,6 +154,8 @@ fun LogMealScreen(
             else -> NotesInputScreen(
                 mealText = uiState.mealText,
                 onTextChange = viewModel::updateMealText,
+                barcodeItems = uiState.barcodeItems,
+                onRemoveBarcodeItem = viewModel::removeBarcodeItem,
                 isThinking = uiState.isEstimating,
                 errorMessage = uiState.errorMessage,
                 onSubmit = { viewModel.estimateMeal() },
@@ -156,6 +173,8 @@ fun LogMealScreen(
 private fun NotesInputScreen(
     mealText: String,
     onTextChange: (String) -> Unit,
+    barcodeItems: List<LoggedBarcodeItem>,
+    onRemoveBarcodeItem: (Int) -> Unit,
     isThinking: Boolean,
     errorMessage: String?,
     onSubmit: () -> Unit,
@@ -165,6 +184,23 @@ private fun NotesInputScreen(
 ) {
     val focusRequester = remember { FocusRequester() }
     val qualityLevel = inputQualityLevel(mealText)
+    var isListening by remember { mutableStateOf(false) }
+    val canAnalyze = (mealText.isNotBlank() || barcodeItems.isNotEmpty()) && !isThinking
+
+    val speechLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        isListening = false
+        if (result.resultCode == Activity.RESULT_OK) {
+            val matches = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            val spoken = matches?.firstOrNull()
+            if (!spoken.isNullOrBlank()) {
+                val updated = if (mealText.isBlank()) spoken
+                              else "${mealText.trimEnd()}, $spoken"
+                onTextChange(updated)
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         delay(100)
@@ -228,6 +264,45 @@ private fun NotesInputScreen(
             style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceDim)
         )
 
+        // Scanned items — exact nutrition, kept out of the AI estimate
+        AnimatedVisibility(
+            visible = barcodeItems.isNotEmpty(),
+            enter = fadeIn(tween(200)) + expandVertically(tween(200)),
+            exit = fadeOut(tween(150)) + shrinkVertically(tween(150))
+        ) {
+            Column {
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Icon(
+                        AppIcons.Barcode,
+                        contentDescription = null,
+                        tint = OrangeAccent,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = "SCANNED · EXACT",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = OnSurfaceDim,
+                            letterSpacing = 1.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp
+                        )
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                barcodeItems.forEachIndexed { index, item ->
+                    ScannedItemChip(
+                        item = item,
+                        onRemove = { onRemoveBarcodeItem(index) }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(28.dp))
 
         // The notes text field — full width, no border, looks like writing
@@ -285,7 +360,7 @@ private fun NotesInputScreen(
             }
         }
 
-        // Analyze + Scan row
+        // Analyze + Mic + Scan row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -294,7 +369,7 @@ private fun NotesInputScreen(
             Button(
                 onClick = onSubmit,
                 modifier = Modifier.weight(1f).height(56.dp),
-                enabled = mealText.isNotBlank() && !isThinking,
+                enabled = canAnalyze,
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = OrangeAccent,
@@ -307,6 +382,46 @@ private fun NotesInputScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Analyze", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
             }
+
+            // Mic button
+            val micPulse by animateFloatAsState(
+                targetValue = if (isListening) 1.15f else 1f,
+                animationSpec = if (isListening)
+                    infiniteRepeatable(tween(600), RepeatMode.Reverse)
+                else
+                    spring(),
+                label = "micPulse"
+            )
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .scale(micPulse)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(if (isListening) OrangeAccent else Surface1)
+                    .border(
+                        BorderStroke(1.dp, if (isListening) OrangeAccent else Color(0x22FFFFFF)),
+                        RoundedCornerShape(16.dp)
+                    )
+                    .clickable {
+                        isListening = true
+                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                            putExtra(RecognizerIntent.EXTRA_PROMPT, "What did you eat?")
+                            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                        }
+                        speechLauncher.launch(intent)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Mic,
+                    contentDescription = "Voice input",
+                    tint = if (isListening) Color.White else OrangeAccent,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            // Barcode button
             Box(
                 modifier = Modifier
                     .size(56.dp)
@@ -325,6 +440,52 @@ private fun NotesInputScreen(
             }
         }
         Spacer(modifier = Modifier.height(20.dp))
+    }
+}
+
+@Composable
+private fun ScannedItemChip(
+    item: LoggedBarcodeItem,
+    onRemove: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Surface1)
+            .border(BorderStroke(1.dp, OrangeAccent.copy(alpha = 0.25f)), RoundedCornerShape(14.dp))
+            .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.name,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = OnSurface,
+                    fontWeight = FontWeight.Medium
+                ),
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+            Text(
+                text = "${item.calories.toInt()} kcal · P ${item.proteinG.toInt()}g · C ${item.carbsG.toInt()}g · F ${item.fatG.toInt()}g",
+                style = MaterialTheme.typography.labelSmall.copy(color = OrangeAccent)
+            )
+        }
+        Box(
+            modifier = Modifier
+                .size(30.dp)
+                .clip(CircleShape)
+                .clickable(onClick = onRemove),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Remove item",
+                tint = OnSurfaceDim,
+                modifier = Modifier.size(16.dp)
+            )
+        }
     }
 }
 
@@ -411,14 +572,26 @@ private fun ResultSheet(
     onEdit: () -> Unit,
     onSaveMeal: () -> Unit
 ) {
-    val rawAvg = estimate.totalCalorieRange.takeIf { it.size >= 2 }
-        ?.let { (it[0] + it[1]) / 2 } ?: estimate.totalCalories
-    val biasedCalories = (rawAvg * (1f + bias)).toInt().coerceAtLeast(1)
-    val rawRange = estimate.totalCalorieRange.takeIf { it.size >= 2 }
+    // Split exact scanned items from AI-estimated ones — the calorie bias only
+    // corrects the AI's guessing, so it must never touch barcode nutrition.
+    fun FoodItem.isExact() = sourceLabel == "Barcode"
+    fun FoodItem.avg() = calorieRange.takeIf { it.size >= 2 }
+        ?.let { (it[0] + it[1]) / 2 } ?: calories
 
-    // Confidence score 0–100 based on range width relative to total
-    val rangeWidth = rawRange?.let { it[1] - it[0] } ?: 0.0
-    val confidenceScore = (100 - (rangeWidth / rawAvg * 100).coerceIn(0.0, 100.0)).toInt()
+    val aiItems = estimate.items.filter { !it.isExact() }
+    val exactItems = estimate.items.filter { it.isExact() }
+
+    val aiRawAvg = aiItems.sumOf { it.avg() }
+    val exactCalories = exactItems.sumOf { it.calories }
+    val biasedCalories = (aiRawAvg * (1f + bias) + exactCalories).toInt().coerceAtLeast(1)
+
+    // Confidence reflects only the AI portion's range width (barcode data is certain)
+    val aiLow = aiItems.sumOf { it.calorieRange.getOrNull(0) ?: it.calories }
+    val aiHigh = aiItems.sumOf { it.calorieRange.getOrNull(1) ?: it.calories }
+    val rangeWidth = aiHigh - aiLow
+    val confidenceScore = if (aiRawAvg > 0)
+        (100 - (rangeWidth / aiRawAvg * 100).coerceIn(0.0, 100.0)).toInt()
+    else 100
     val confidenceLabel = when {
         confidenceScore >= 75 -> "High"
         confidenceScore >= 50 -> "Medium"
@@ -568,12 +741,17 @@ private fun ResultSheet(
             Column(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                // 🔥 calories row
+                // flame + calories row
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("🔥", fontSize = 22.sp)
+                    Icon(
+                        AppIcons.Flame,
+                        contentDescription = null,
+                        tint = OrangeAccent,
+                        modifier = Modifier.size(24.dp)
+                    )
                     val animated by animateIntAsState(
                         targetValue = if (contentVisible) biasedCalories else 0,
                         animationSpec = spring(
@@ -656,7 +834,8 @@ private fun ResultSheet(
             Spacer(modifier = Modifier.height(10.dp))
 
             estimate.items.forEach { item ->
-                ResultItemRow(item = item, bias = bias)
+                // Scanned items are exact — never bias them
+                ResultItemRow(item = item, bias = if (item.isExact()) 0f else bias)
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
@@ -921,6 +1100,7 @@ private fun ResultItemRow(item: FoodItem, bias: Float) {
 
 // ── References section ───────────────────────────────────────────────────────
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun ReferencesSection(sources: List<String>) {
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
@@ -944,63 +1124,144 @@ private fun ReferencesSection(sources: List<String>) {
 
     if (links.isEmpty()) return
 
+    var expanded by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-        Text(
-            text = "References",
-            style = MaterialTheme.typography.labelMedium.copy(
-                color = OnSurfaceVariant,
-                letterSpacing = 0.3.sp
+        // Header — tap to toggle the detailed list
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { expanded = !expanded }
+                .padding(vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = "References",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    color = OnSurfaceVariant,
+                    letterSpacing = 0.3.sp
+                )
             )
-        )
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(Color(0xFF3A3A3C))
+                    .padding(horizontal = 6.dp, vertical = 1.dp)
+            ) {
+                Text(
+                    text = "${links.size}",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = OnSurfaceVariant,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(
+                if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = if (expanded) "Collapse" else "Expand",
+                tint = OnSurfaceDim,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.height(10.dp))
 
-        Card(
+        // Collapsed: compact domain bubbles, each opens its source directly
+        androidx.compose.foundation.layout.FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
-            elevation = CardDefaults.cardElevation(0.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            links.forEach { link ->
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(99.dp))
+                        .background(Color(0xFF2A2A2A))
+                        .border(BorderStroke(1.dp, Color(0x14FFFFFF)), RoundedCornerShape(99.dp))
+                        .clickable { uriHandler.openUri(link.url) }
+                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Language,
+                        contentDescription = null,
+                        tint = OrangeAccent,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = link.domain,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = OnSurface,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+
+        // Expanded: full titled list
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn(tween(200)) + expandVertically(tween(200)),
+            exit = fadeOut(tween(150)) + shrinkVertically(tween(150))
         ) {
             Column {
-                links.forEachIndexed { i, link ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { uriHandler.openUri(link.url) }
-                            .padding(horizontal = 16.dp, vertical = 13.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = link.title,
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = OnSurface,
-                                    fontWeight = FontWeight.Medium,
-                                    lineHeight = 18.sp
-                                ),
-                                maxLines = 2
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = link.domain,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = OrangeAccent,
-                                    fontSize = 10.sp
+                Spacer(modifier = Modifier.height(10.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
+                    elevation = CardDefaults.cardElevation(0.dp)
+                ) {
+                    Column {
+                        links.forEachIndexed { i, link ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { uriHandler.openUri(link.url) }
+                                    .padding(horizontal = 16.dp, vertical = 13.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = link.title,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = OnSurface,
+                                            fontWeight = FontWeight.Medium,
+                                            lineHeight = 18.sp
+                                        ),
+                                        maxLines = 2
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = link.domain,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = OrangeAccent,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+                                Icon(
+                                    Icons.Default.OpenInNew,
+                                    contentDescription = "Open link",
+                                    tint = OnSurfaceDim,
+                                    modifier = Modifier.size(14.dp)
                                 )
-                            )
+                            }
+                            if (i < links.lastIndex) {
+                                HorizontalDivider(
+                                    color = Color(0xFF3A3A3C),
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                            }
                         }
-                        Icon(
-                            Icons.Default.OpenInNew,
-                            contentDescription = "Open link",
-                            tint = OnSurfaceDim,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                    if (i < links.lastIndex) {
-                        HorizontalDivider(
-                            color = Color(0xFF3A3A3C),
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
                     }
                 }
             }

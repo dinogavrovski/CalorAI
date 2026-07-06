@@ -30,6 +30,7 @@ data class AuthResponse(
 data class UserProfile(
     @Json(name = "id") val id: String,
     @Json(name = "email") val email: String,
+    @Json(name = "display_name") val displayName: String? = null,
     @Json(name = "calorie_goal") val calorieGoal: Int = 2000,
     @Json(name = "height_cm") val heightCm: Double? = null,
     @Json(name = "age") val age: Int? = null,
@@ -42,6 +43,7 @@ data class UserProfile(
 
 @JsonClass(generateAdapter = true)
 data class UpdateProfileRequest(
+    @Json(name = "display_name") val displayName: String? = null,
     @Json(name = "calorie_goal") val calorieGoal: Int? = null,
     @Json(name = "height_cm") val heightCm: Double? = null,
     @Json(name = "age") val age: Int? = null,
@@ -88,8 +90,27 @@ data class EstimateResponse(
 // ─── Meals ───────────────────────────────────────────────────────────────────
 
 @JsonClass(generateAdapter = true)
+data class BarcodeLogItem(
+    @Json(name = "note") val note: String,
+    @Json(name = "calories") val calories: Float,
+    @Json(name = "protein_g") val proteinG: Float = 0f,
+    @Json(name = "carbs_g") val carbsG: Float = 0f,
+    @Json(name = "fat_g") val fatG: Float = 0f
+)
+
+@JsonClass(generateAdapter = true)
 data class LogMealRequest(
-    @Json(name = "note") val note: String
+    @Json(name = "note") val note: String,
+    @Json(name = "barcode_items") val barcodeItems: List<BarcodeLogItem> = emptyList()
+)
+
+/** Structured scanned item carried in the LogMeal note — exact nutrition, bypasses AI. */
+data class LoggedBarcodeItem(
+    val name: String,
+    val calories: Float,
+    val proteinG: Float = 0f,
+    val carbsG: Float = 0f,
+    val fatG: Float = 0f
 )
 
 @JsonClass(generateAdapter = true)

@@ -22,8 +22,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
+import com.calorai.app.data.remote.models.LoggedBarcodeItem
 import com.calorai.app.ui.components.AppIcons
 import com.calorai.app.ui.screens.auth.LoginScreen
 import com.calorai.app.ui.screens.auth.RegisterScreen
@@ -42,6 +44,30 @@ import com.calorai.app.ui.theme.OnSurfaceDim
 private val EaseOut = CubicBezierEasing(0.25f, 0.46f, 0.45f, 0.94f)
 private val EaseInOut = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)
 
+// ── Barcode item passing (scan result → LogMeal note) ───────────────────────
+// No kotlin-parcelize in this module, so a scanned item is carried back through
+// the nav result as a "|"-delimited string (name URL-encoded so it can't clash).
+private fun encodeBarcodeItem(item: LoggedBarcodeItem): String = listOf(
+    java.net.URLEncoder.encode(item.name, "UTF-8"),
+    item.calories.toString(),
+    item.proteinG.toString(),
+    item.carbsG.toString(),
+    item.fatG.toString()
+).joinToString("|")
+
+private fun decodeBarcodeItem(raw: String): LoggedBarcodeItem? = try {
+    val p = raw.split("|")
+    LoggedBarcodeItem(
+        name = java.net.URLDecoder.decode(p[0], "UTF-8"),
+        calories = p[1].toFloat(),
+        proteinG = p[2].toFloat(),
+        carbsG = p[3].toFloat(),
+        fatG = p[4].toFloat()
+    )
+} catch (e: Exception) {
+    null
+}
+
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
@@ -50,9 +76,12 @@ sealed class Screen(val route: String) {
     object History : Screen("history")
     object Profile : Screen("profile")
     object Weight : Screen("weight")
-    object BarcodeScanner : Screen("barcode_scanner")
-    object ProductDetail : Screen("product_detail/{barcode}") {
-        fun route(barcode: String) = "product_detail/${java.net.URLEncoder.encode(barcode, "UTF-8")}"
+    object BarcodeScanner : Screen("barcode_scanner?source={source}") {
+        fun route(source: String = "nav") = "barcode_scanner?source=$source"
+    }
+    object ProductDetail : Screen("product_detail/{barcode}?source={source}") {
+        fun route(barcode: String, source: String = "nav") =
+            "product_detail/${java.net.URLEncoder.encode(barcode, "UTF-8")}?source=$source"
     }
 }
 
@@ -91,7 +120,7 @@ fun CalorAINavGraph() {
                         }
                     },
                     onLogMeal = { navController.navigate(Screen.LogMeal.route) },
-                    onScanBarcode = { navController.navigate(Screen.BarcodeScanner.route) }
+                    onScanBarcode = { navController.navigate(Screen.BarcodeScanner.route()) }
                 )
             }
         }
@@ -139,18 +168,29 @@ fun CalorAINavGraph() {
                 WeightScreen(paddingValues = padding)
             }
 
-            composable(Screen.BarcodeScanner.route) {
+            composable(
+                route = Screen.BarcodeScanner.route,
+                arguments = listOf(androidx.navigation.navArgument("source") {
+                    type = androidx.navigation.NavType.StringType; defaultValue = "nav"
+                })
+            ) { entry ->
+                val source = entry.arguments?.getString("source") ?: "nav"
                 BarcodeScannerScreen(
                     onDismiss = { navController.popBackStack() },
                     onBarcodeFound = { barcode ->
-                        navController.navigate(Screen.ProductDetail.route(barcode))
+                        navController.navigate(Screen.ProductDetail.route(barcode, source))
                     }
                 )
             }
 
             composable(
                 route = Screen.ProductDetail.route,
-                arguments = listOf(androidx.navigation.navArgument("barcode") { type = androidx.navigation.NavType.StringType }),
+                arguments = listOf(
+                    androidx.navigation.navArgument("barcode") { type = androidx.navigation.NavType.StringType },
+                    androidx.navigation.navArgument("source") {
+                        type = androidx.navigation.NavType.StringType; defaultValue = "nav"
+                    }
+                ),
                 enterTransition = {
                     slideInVertically(initialOffsetY = { it }, animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessLow)) + fadeIn(tween(380))
                 },
@@ -164,13 +204,20 @@ fun CalorAINavGraph() {
                 val barcode = java.net.URLDecoder.decode(
                     backStackEntry.arguments?.getString("barcode") ?: "", "UTF-8"
                 )
+                val source = backStackEntry.arguments?.getString("source") ?: "nav"
                 ProductDetailScreen(
                     barcode = barcode,
+                    source = source,
                     onDismiss = { navController.popBackStack() },
                     onProductLogged = {
                         navController.navigate(Screen.Home.route) {
                             popUpTo(Screen.Home.route) { inclusive = true }
                         }
+                    },
+                    onAddToNote = { item ->
+                        navController.getBackStackEntry(Screen.LogMeal.route)
+                            .savedStateHandle["barcode_item"] = encodeBarcodeItem(item)
+                        navController.popBackStack(Screen.LogMeal.route, false)
                     }
                 )
             }
@@ -214,14 +261,19 @@ fun CalorAINavGraph() {
                         )
                     ) + fadeOut(tween(250))
                 }
-            ) {
+            ) { entry ->
+                val barcodeItemPayload by entry.savedStateHandle
+                    .getStateFlow<String?>("barcode_item", null)
+                    .collectAsStateWithLifecycle()
                 LogMealScreen(
                     onMealLogged = {
                         navController.navigate(Screen.Home.route) {
                             popUpTo(Screen.Home.route) { inclusive = true }
                         }
                     },
-                    onScanBarcode = { navController.navigate(Screen.BarcodeScanner.route) },
+                    onScanBarcode = { navController.navigate(Screen.BarcodeScanner.route("log")) },
+                    scannedItem = barcodeItemPayload?.let { decodeBarcodeItem(it) },
+                    onScannedItemConsumed = { entry.savedStateHandle.remove<String>("barcode_item") },
                     paddingValues = padding
                 )
             }

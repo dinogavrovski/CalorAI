@@ -15,6 +15,7 @@ class UserLogin(BaseModel):
 class UserResponse(BaseModel):
     id: int
     email: EmailStr
+    display_name: Optional[str] = None
     calorie_goal: int = 2000
     height_cm: Optional[float] = None
     age: Optional[int] = None
@@ -29,6 +30,7 @@ class UserResponse(BaseModel):
 
 
 class UpdateProfileRequest(BaseModel):
+    display_name: Optional[str] = None
     height_cm: Optional[float] = None
     age: Optional[int] = None
     sex: Optional[str] = None

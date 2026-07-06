@@ -9,6 +9,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    display_name = Column(String, nullable=True)
 
     # Biometrics
     height_cm = Column(Float, nullable=True)
@@ -24,3 +25,4 @@ class User(Base):
     refresh_sessions = relationship("RefreshSession", back_populates="user", cascade="all, delete-orphan")
     weight_logs = relationship("WeightLog", back_populates="user", cascade="all, delete-orphan")
     saved_meals = relationship("SavedMeal", back_populates="user", cascade="all, delete-orphan")
+    entitlement = relationship("Entitlement", back_populates="user", uselist=False, cascade="all, delete-orphan")

@@ -7,7 +7,7 @@ from app.dependencies.auth import get_current_user
 from app.models.meal_log import MealLog
 from app.models.saved_meal import SavedMeal
 from app.models.user import User
-from app.schemas.text_log import TextLogRequest
+from app.schemas.text_log import TextLogRequest, MealLogRequest
 from app.schemas.user import UserResponse, UpdateProfileRequest
 from app.services.text_calorie_estimator import estimate_from_text_note
 from app.services.tdee import calculate_tdee
@@ -70,7 +70,7 @@ def update_profile(
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    fields = ["height_cm", "age", "sex", "current_weight_kg", "goal_weight_kg", "weekly_goal_kg", "activity_level"]
+    fields = ["display_name", "height_cm", "age", "sex", "current_weight_kg", "goal_weight_kg", "weekly_goal_kg", "activity_level"]
     for field in fields:
         value = getattr(payload, field)
         if value is not None:
@@ -96,24 +96,63 @@ def update_profile(
 
 @router.post("/meal-history")
 def save_meal_history(
-    payload: TextLogRequest,
+    payload: MealLogRequest,
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    # Never trust client-provided nutrition totals; recompute on the server.
-    try:
-        estimate = estimate_from_text_note(payload.note)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    low, high = estimate["total_calorie_range"]
+    items: list[dict] = []
+    total_cal = 0.0
+    total_low = 0.0
+    total_high = 0.0
+
+    # ── Typed portion: AI-estimated (never trust client totals; recompute here) ──
+    note_text = payload.note.strip()
+    if len(note_text) >= 2:
+        try:
+            estimate = estimate_from_text_note(note_text)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        low, high = estimate["total_calorie_range"]
+        items.extend(estimate["items"])
+        total_cal += float(estimate["total_calories"])
+        total_low += float(low)
+        total_high += float(high)
+
+    # ── Scanned portion: exact barcode nutrition, no AI ─────────────────────────
+    for b in payload.barcode_items:
+        if b.calories <= 0:
+            continue
+        items.append({
+            "note_part": b.note,
+            "parsed_food": b.note,
+            "calories": round(b.calories, 1),
+            "calorie_range": [round(b.calories * 0.98, 1), round(b.calories * 1.02, 1)],
+            "protein_g": round(b.protein_g, 1),
+            "carbs_g": round(b.carbs_g, 1),
+            "fat_g": round(b.fat_g, 1),
+            "nutrition_source": "barcode",
+        })
+        total_cal += b.calories
+        total_low += b.calories * 0.98
+        total_high += b.calories * 1.02
+
+    if not items:
+        raise HTTPException(
+            status_code=422,
+            detail="Meal must contain a description or at least one scanned item",
+        )
+
+    # Combined note for display in history
+    barcode_names = ", ".join(b.note for b in payload.barcode_items if b.calories > 0)
+    combined_note = ", ".join(part for part in (note_text, barcode_names) if part)
 
     meal_log = MealLog(
         user_id=current_user.id,
-        note=estimate["note"],
-        items_json=estimate["items"],
-        total_calories=float(estimate["total_calories"]),
-        total_calorie_low=float(low),
-        total_calorie_high=float(high),
+        note=combined_note,
+        items_json=items,
+        total_calories=round(total_cal, 1),
+        total_calorie_low=round(total_low, 1),
+        total_calorie_high=round(total_high, 1),
     )
     db.add(meal_log)
     db.commit()

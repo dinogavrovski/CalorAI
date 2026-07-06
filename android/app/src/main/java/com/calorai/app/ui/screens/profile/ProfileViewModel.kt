@@ -149,6 +149,20 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    fun saveDisplayName(name: String) {
+        val trimmed = name.trim()
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+            when (val result = mealRepository.updateProfile(UpdateProfileRequest(displayName = trimmed))) {
+                is ApiResult.Success -> _uiState.update {
+                    it.copy(isSaving = false, profile = result.data, successMessage = "Name updated!")
+                }
+                is ApiResult.Error -> _uiState.update { it.copy(isSaving = false, errorMessage = result.message) }
+                else -> _uiState.update { it.copy(isSaving = false) }
+            }
+        }
+    }
+
     fun saveManualCalorieGoal(goal: Int) {
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }

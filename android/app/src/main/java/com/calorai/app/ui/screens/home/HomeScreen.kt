@@ -79,70 +79,52 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Logo
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(OrangeAccent),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("N", style = MaterialTheme.typography.labelLarge.copy(
-                        color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp
-                    ))
-                }
+            // Personalised greeting
+            val greeting = when (java.time.LocalTime.now().hour) {
+                in 5..11 -> "Good morning"
+                in 12..17 -> "Good afternoon"
+                else -> "Good evening"
+            }
+            val name = uiState.profile?.displayName?.takeIf { it.isNotBlank() }
+                ?: uiState.profile?.email?.substringBefore("@")
+                ?: "there"
+            Column {
                 Text(
-                    text = "NoteBite",
+                    text = greeting,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = OnSurfaceDim, fontWeight = FontWeight.Medium
+                    )
+                )
+                Text(
+                    text = name,
                     style = MaterialTheme.typography.titleMedium.copy(
                         color = OnSurface, fontWeight = FontWeight.ExtraBold,
-                        fontSize = 18.sp, letterSpacing = (-0.5).sp
+                        fontSize = 18.sp, letterSpacing = (-0.3).sp
                     )
                 )
             }
 
-            // Streak + Bell + Avatar
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                // Streak pill
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(99.dp))
-                        .border(CardBorder, RoundedCornerShape(99.dp))
-                        .background(Surface1)
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(AppIcons.Flame, contentDescription = "Streak",
-                        tint = OrangeAccent, modifier = Modifier.size(14.dp))
-                    Text("8", style = MaterialTheme.typography.labelMedium.copy(
-                        color = OnSurface, fontWeight = FontWeight.Bold))
-                }
-                // Bell
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .border(CardBorder, CircleShape)
-                        .background(Surface1),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(AppIcons.Bell, contentDescription = "Notifications",
-                        tint = OnSurfaceVariant, modifier = Modifier.size(18.dp))
-                }
-                // Avatar
-                val initial = uiState.profile?.email?.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .border(BorderStroke(1.5.dp, OrangeAccent.copy(alpha = 0.6f)), CircleShape)
-                        .background(Brush.linearGradient(listOf(OrangeAccent, Color(0xFFFF8C00)))),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(initial, style = MaterialTheme.typography.labelMedium.copy(
-                        color = Color.White, fontWeight = FontWeight.ExtraBold))
-                }
+            // Streak flame
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(OrangeAccent.copy(alpha = 0.12f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Icon(
+                    AppIcons.Flame,
+                    contentDescription = "Streak",
+                    tint = OrangeAccent,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    "8",
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        color = OrangeAccent, fontWeight = FontWeight.ExtraBold
+                    )
+                )
             }
         }
 

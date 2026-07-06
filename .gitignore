@@ -70,3 +70,17 @@ skills-lock.json
 
 # IDE Metadata
 .idea/
+
+# Kotlin / Gradle build sessions & artifacts
+.kotlin/
+*.salive
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+
+# Stderr capture / misc runtime output
+*.err
+
+# Claude Code local config
+.claude/

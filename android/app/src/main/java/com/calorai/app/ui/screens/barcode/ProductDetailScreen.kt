@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.calorai.app.data.remote.models.BarcodeProduct
+import com.calorai.app.data.remote.models.LoggedBarcodeItem
 import com.calorai.app.ui.theme.*
 import kotlinx.coroutines.delay
 
@@ -38,8 +39,10 @@ private val CardBorder = BorderStroke(1.dp, Color(0x14FFFFFF))
 @Composable
 fun ProductDetailScreen(
     barcode: String,
+    source: String = "nav",
     onDismiss: () -> Unit,
     onProductLogged: () -> Unit,
+    onAddToNote: (LoggedBarcodeItem) -> Unit = {},
     viewModel: BarcodeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -87,7 +90,9 @@ fun ProductDetailScreen(
                     onServingsChange = viewModel::setServings,
                     isLogging = uiState.isLogging,
                     logSuccess = uiState.logSuccess,
+                    source = source,
                     onLog = { viewModel.logProduct(it) },
+                    onAddToNote = onAddToNote,
                     onDismiss = onDismiss
                 )
             }
@@ -127,7 +132,9 @@ private fun ProductContent(
     onServingsChange: (Float) -> Unit,
     isLogging: Boolean,
     logSuccess: Boolean,
+    source: String = "nav",
     onLog: (Float) -> Unit,
+    onAddToNote: (LoggedBarcodeItem) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -288,27 +295,51 @@ private fun ProductContent(
             NutritionRow("Fat", "%.1fg".format(product.fatG), color = Color(0xFFEF9A9A))
         }
 
-        // ── Add to diary button ──────────────────────────────────────
+        // ── Action button ────────────────────────────────────────────
         Spacer(Modifier.height(4.dp))
-        Button(
-            onClick = { onLog(servings) },
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            enabled = !isLogging && !logSuccess,
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (logSuccess) Color(0xFF4CAF50) else OrangeAccent,
-                contentColor = Color.White,
-                disabledContainerColor = if (logSuccess) Color(0xFF4CAF50) else OrangeAccent.copy(alpha = 0.5f),
-                disabledContentColor = Color.White.copy(alpha = 0.7f)
-            )
-        ) {
-            if (isLogging) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-            } else {
-                Text(
-                    if (logSuccess) "✓ Added to diary!" else "Add to Diary",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+        if (source == "log") {
+            // Came from LogMeal note — hand the exact scanned item back to the note (bypasses AI)
+            Button(
+                onClick = {
+                    val servingLabel = if (servings == 1f) ""
+                        else "${if (servings == servings.toLong().toFloat()) servings.toLong().toString() else "%.1f".format(servings)}x "
+                    onAddToNote(
+                        LoggedBarcodeItem(
+                            name = "$servingLabel${product.name}",
+                            calories = product.caloriesPerServing * servings,
+                            proteinG = product.proteinG * servings,
+                            carbsG = product.carbsG * servings,
+                            fatG = product.fatG * servings
+                        )
+                    )
+                },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = OrangeAccent, contentColor = Color.White)
+            ) {
+                Text("Add to Note", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+            }
+        } else {
+            Button(
+                onClick = { onLog(servings) },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                enabled = !isLogging && !logSuccess,
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (logSuccess) Color(0xFF4CAF50) else OrangeAccent,
+                    contentColor = Color.White,
+                    disabledContainerColor = if (logSuccess) Color(0xFF4CAF50) else OrangeAccent.copy(alpha = 0.5f),
+                    disabledContentColor = Color.White.copy(alpha = 0.7f)
                 )
+            ) {
+                if (isLogging) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(
+                        if (logSuccess) "✓ Added to diary!" else "Add to Diary",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
             }
         }
     }

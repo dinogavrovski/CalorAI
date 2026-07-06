@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vora — Effortless AI calorie tracking</title>
+  <meta name="description" content="Just describe your meal. Vora's AI estimates calories and macros from a sentence, a barcode, or your voice — grounded in real nutrition data." />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Vora — Effortless AI calorie tracking" />
+  <meta property="og:description" content="Just say what you ate. Vora does the math — grounded in real nutrition data." />
+  <meta property="og:type" content="website" />
+
+  <!-- Inline SVG favicon (the Vora V) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='114' fill='%230F0F0F'/%3E%3Cpath d='M150 150 L214 150 L256 262 L298 150 L362 150 L272 336 Q256 372 240 336 Z' fill='%23FF7A2E'/%3E%3C/svg%3E" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ── Nav ─────────────────────────────────────────────────────────── -->
+  <header class="nav">
+    <a href="#" class="brand" aria-label="Vora home">
+      <svg class="brand__logo" viewBox="0 0 512 512" aria-hidden="true">
+        <defs>
+          <linearGradient id="vg-nav" x1="256" y1="132" x2="256" y2="372" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#FF8C42" />
+            <stop offset="1" stop-color="#FF6B1A" />
+          </linearGradient>
+        </defs>
+        <path d="M150 150 L214 150 L256 262 L298 150 L362 150 L272 336 Q256 372 240 336 Z" fill="url(#vg-nav)" />
+      </svg>
+      <span class="brand__name">Vora</span>
+    </a>
+    <nav class="nav__links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#waitlist" class="btn btn--sm">Join waitlist</a>
+    </nav>
+  </header>
+
+  <!-- ── Hero ────────────────────────────────────────────────────────── -->
+  <main>
+    <section class="hero">
+      <div class="hero__glow" aria-hidden="true"></div>
+      <div class="hero__content">
+        <div class="pill">
+          <span class="pill__dot"></span> Launching soon on Android
+        </div>
+        <h1 class="hero__title">
+          Just say what you ate.<br />
+          <span class="grad">Vora does the math.</span>
+        </h1>
+        <p class="hero__sub">
+          Skip the tedious food database. Describe your meal like a note, scan a
+          barcode, or use your voice — Vora's AI estimates the calories and macros,
+          grounded in real nutrition data.
+        </p>
+
+        <form class="waitlist" id="waitlist-hero" novalidate>
+          <input
+            type="email"
+            class="waitlist__input"
+            placeholder="you@email.com"
+            aria-label="Email address"
+            required
+          />
+          <button type="submit" class="btn btn--primary">Get early access</button>
+        </form>
+        <p class="waitlist__note" id="waitlist-hero-note">No spam. We'll email you once when it's ready.</p>
+      </div>
+
+      <!-- Phone mockup -->
+      <div class="hero__phone" aria-hidden="true">
+        <div class="phone">
+          <div class="phone__notch"></div>
+          <div class="phone__screen">
+            <div class="mock-greeting">
+              <span class="mock-greeting__hi">Good evening</span>
+              <span class="mock-greeting__name">Dino</span>
+            </div>
+            <div class="mock-card">
+              <div class="mock-card__label">Calories left</div>
+              <div class="mock-card__big">1,240</div>
+              <div class="mock-ring"></div>
+            </div>
+            <div class="mock-note">
+              <div class="mock-note__text">“2 eggs, sourdough toast with butter, black coffee”</div>
+              <div class="mock-note__btn">Analyze ✨</div>
+            </div>
+            <div class="mock-result">
+              <div class="mock-result__row">
+                <span>🔥 420 kcal</span><span class="mock-conf">High confidence</span>
+              </div>
+              <div class="mock-macros">
+                <span><b>18</b>g protein</span><span><b>34</b>g carbs</span><span><b>22</b>g fat</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Features ──────────────────────────────────────────────────── -->
+    <section class="section" id="features">
+      <div class="section__head">
+        <span class="eyebrow">Why Vora</span>
+        <h2>Logging food, without the friction.</h2>
+        <p>Most calorie apps make you search a database for every bite. Vora just understands what you tell it.</p>
+      </div>
+
+      <div class="grid">
+        <article class="feature">
+          <div class="feature__icon">📝</div>
+          <h3>Describe it, don't log it</h3>
+          <p>Write your meal like a sentence. The AI parses each item, portion, and cooking method — then estimates calories and macros.</p>
+        </article>
+        <article class="feature">
+          <div class="feature__icon">▦</div>
+          <h3>Scan any barcode</h3>
+          <p>Exact nutrition straight from the product label — no guessing. Scanned items stay precise and never get AI-estimated.</p>
+        </article>
+        <article class="feature">
+          <div class="feature__icon">🎙️</div>
+          <h3>Talk to log</h3>
+          <p>Hands full? Just speak your meal. Voice input turns what you say into a logged entry in seconds.</p>
+        </article>
+        <article class="feature">
+          <div class="feature__icon">🔗</div>
+          <h3>Web-grounded accuracy</h3>
+          <p>Estimates are backed by real nutrition sources you can tap and verify — not numbers pulled from thin air.</p>
+        </article>
+        <article class="feature">
+          <div class="feature__icon">📉</div>
+          <h3>Weight &amp; goals</h3>
+          <p>Track weight trends over time with a clean chart and an auto-calculated daily calorie goal based on your body.</p>
+        </article>
+        <article class="feature">
+          <div class="feature__icon">🎚️</div>
+          <h3>Dial in your bias</h3>
+          <p>Think estimates run high or low? Nudge them to match your body's reality — applied only to AI guesses, never exact data.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ── How it works ──────────────────────────────────────────────── -->
+    <section class="section section--alt" id="how">
+      <div class="section__head">
+        <span class="eyebrow">How it works</span>
+        <h2>Three taps from meal to logged.</h2>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step__num">1</div>
+          <h3>Describe, scan, or speak</h3>
+          <p>Type your meal, scan a barcode, or say it out loud.</p>
+        </div>
+        <div class="step__arrow" aria-hidden="true">→</div>
+        <div class="step">
+          <div class="step__num">2</div>
+          <h3>AI estimates it</h3>
+          <p>Get calories, macros, a confidence score, and real sources.</p>
+        </div>
+        <div class="step__arrow" aria-hidden="true">→</div>
+        <div class="step">
+          <div class="step__num">3</div>
+          <h3>Log &amp; track</h3>
+          <p>One tap to log. Watch your day and your weight trend update.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Waitlist CTA ──────────────────────────────────────────────── -->
+    <section class="cta" id="waitlist">
+      <div class="cta__card">
+        <div class="cta__glow" aria-hidden="true"></div>
+        <h2>Be first to try Vora.</h2>
+        <p>Join the waitlist and we'll send you an invite the moment it hits the Play Store.</p>
+        <form class="waitlist waitlist--center" id="waitlist-cta" novalidate>
+          <input
+            type="email"
+            class="waitlist__input"
+            placeholder="you@email.com"
+            aria-label="Email address"
+            required
+          />
+          <button type="submit" class="btn btn--primary">Join the waitlist</button>
+        </form>
+        <p class="waitlist__note" id="waitlist-cta-note">Be one of the first. No spam, ever.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- ── Footer ──────────────────────────────────────────────────────── -->
+  <footer class="footer">
+    <div class="footer__brand">
+      <svg class="brand__logo brand__logo--sm" viewBox="0 0 512 512" aria-hidden="true">
+        <defs>
+          <linearGradient id="vg-foot" x1="256" y1="132" x2="256" y2="372" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#FF8C42" />
+            <stop offset="1" stop-color="#FF6B1A" />
+          </linearGradient>
+        </defs>
+        <path d="M150 150 L214 150 L256 262 L298 150 L362 150 L272 336 Q256 372 240 336 Z" fill="url(#vg-foot)" />
+      </svg>
+      <span>Vora</span>
+    </div>
+    <p class="footer__copy">© <span id="year"></span> Vora. Made for people who'd rather not count.</p>
+    <nav class="footer__links">
+      <a href="#features">Features</a>
+      <a href="#waitlist">Waitlist</a>
+      <a href="#" aria-disabled="true">Privacy</a>
+    </nav>
+  </footer>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>

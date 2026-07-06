@@ -29,9 +29,12 @@ class MealRepository @Inject constructor(
         }
     }
 
-    suspend fun logMeal(note: String): ApiResult<MealLog> {
+    suspend fun logMeal(
+        note: String,
+        barcodeItems: List<BarcodeLogItem> = emptyList()
+    ): ApiResult<MealLog> {
         return try {
-            val response = apiService.logMeal(LogMealRequest(note))
+            val response = apiService.logMeal(LogMealRequest(note, barcodeItems))
             if (response.isSuccessful) {
                 ApiResult.Success(response.body()!!)
             } else {

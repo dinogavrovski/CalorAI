@@ -5,6 +5,21 @@ class TextLogRequest(BaseModel):
     note: str = Field(..., min_length=2, max_length=300)
 
 
+class BarcodeLogItem(BaseModel):
+    """An exact, pre-computed item from a barcode scan — bypasses AI estimation."""
+    note: str
+    calories: float
+    protein_g: float = 0.0
+    carbs_g: float = 0.0
+    fat_g: float = 0.0
+
+
+class MealLogRequest(BaseModel):
+    """A meal to log: an optional typed note (AI-estimated) plus any scanned barcode items (exact)."""
+    note: str = Field(default="", max_length=300)
+    barcode_items: list[BarcodeLogItem] = []
+
+
 class TextLogItem(BaseModel):
     note_part: str
     parsed_food: str

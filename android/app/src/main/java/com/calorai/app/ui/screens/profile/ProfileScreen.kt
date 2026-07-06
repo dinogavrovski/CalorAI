@@ -43,7 +43,12 @@ fun ProfileScreen(
     var showGoalsDialog by remember { mutableStateOf(false) }
     var showManualGoalDialog by remember { mutableStateOf(false) }
     var showBiasDialog by remember { mutableStateOf(false) }
+    var showNameDialog by remember { mutableStateOf(false) }
     var manualGoalValue by remember { mutableStateOf("") }
+    var nameValue by remember { mutableStateOf("") }
+
+    val displayName = uiState.profile?.displayName?.takeIf { it.isNotBlank() }
+    val shownName = displayName ?: uiState.profile?.email?.substringBefore("@")
 
     LaunchedEffect(uiState.successMessage) {
         if (uiState.successMessage != null) {
@@ -80,7 +85,7 @@ fun ProfileScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val initials = uiState.profile?.email?.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+            val initials = (displayName ?: uiState.profile?.email)?.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
             Box(
                 modifier = Modifier
                     .size(64.dp)
@@ -101,7 +106,7 @@ fun ProfileScreen(
             }
             Column {
                 Text(
-                    text = uiState.profile?.email?.substringBefore("@") ?: "—",
+                    text = shownName ?: "—",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = OnSurface)
                 )
                 Spacer(modifier = Modifier.height(2.dp))
@@ -119,9 +124,13 @@ fun ProfileScreen(
         SettingsGroup {
             SettingsRow(
                 icon = Icons.Outlined.Person,
-                label = "Edit Profile",
-                value = uiState.profile?.email?.substringBefore("@"),
-                onClick = {}
+                label = "Name",
+                value = displayName ?: "Set name",
+                valueColor = if (displayName != null) OnSurfaceVariant else OnSurfaceDim,
+                onClick = {
+                    nameValue = displayName ?: ""
+                    showNameDialog = true
+                }
             )
             SettingsDivider()
             SettingsRow(
@@ -286,6 +295,20 @@ fun ProfileScreen(
             onFormChange = viewModel::updateForm,
             onSave = { viewModel.saveBiometrics(); showGoalsDialog = false },
             onDismiss = { showGoalsDialog = false }
+        )
+    }
+
+    // ── Name Dialog ───────────────────────────────────────────────────────────
+    if (showNameDialog) {
+        NameDialog(
+            value = nameValue,
+            isSaving = uiState.isSaving,
+            onValueChange = { nameValue = it },
+            onConfirm = {
+                viewModel.saveDisplayName(nameValue)
+                showNameDialog = false
+            },
+            onDismiss = { showNameDialog = false }
         )
     }
 
@@ -634,6 +657,68 @@ private fun GoalsDialog(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = OrangeAccent),
                         enabled = !isSaving
+                    ) {
+                        if (isSaving) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("Save", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Name Dialog ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun NameDialog(
+    value: String,
+    isSaving: Boolean,
+    onValueChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Surface1)) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    "Your Name",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = OnSurface)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "This is how we'll greet you on the home screen.",
+                    style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { if (it.length <= 30) onValueChange(it) },
+                    singleLine = true,
+                    placeholder = { Text("e.g. Dino", color = OnSurfaceDim) },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { if (value.isNotBlank()) onConfirm() }),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = outlinedFieldColors()
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = onDismiss, modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Surface3)
+                    ) { Text("Cancel", color = OnSurfaceVariant) }
+                    Button(
+                        onClick = onConfirm, modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = OrangeAccent),
+                        enabled = value.isNotBlank() && !isSaving
                     ) {
                         if (isSaving) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)

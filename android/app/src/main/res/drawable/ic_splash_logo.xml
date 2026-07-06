@@ -1,29 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
     <path
-        android:fillColor="#00E676"
-        android:pathData="M54,20 A34,34 0 1,1 53.99,20 Z"
-        android:strokeColor="#00E676"
-        android:strokeWidth="4"
-        android:fillAlpha="0" />
-    <path
-        android:fillColor="#00E676"
-        android:pathData="M54,16 A38,38 0 1,0 54.01,16 Z"
-        android:strokeColor="#00E676"
-        android:strokeWidth="4"
-        android:fillAlpha="0" />
-    <!-- Leaf / calorie icon shape -->
-    <path
-        android:fillColor="#00E676"
-        android:pathData="M54,28 C42,28 33,37 33,49 C33,61 42,70 54,70 C66,70 75,61 75,49 C75,37 66,28 54,28 Z M54,64 C45,64 39,57 39,49 C39,41 45,34 54,34 C63,34 69,41 69,49 C69,57 63,64 54,64 Z" />
-    <path
-        android:fillColor="#00E676"
-        android:pathData="M51,43 L51,55 L57,55 L57,43 Z" />
-    <path
-        android:fillColor="#00E676"
-        android:pathData="M45,49 L63,49" android:strokeColor="#00E676" android:strokeWidth="6" android:strokeLineCap="round"/>
+        android:pathData="M31.64,31.64 L45.14,31.64 L54,55.27 L62.86,31.64 L76.36,31.64 L57.38,70.88 Q54,78.47 50.63,70.88 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="54"
+                android:startY="27.84"
+                android:endX="54"
+                android:endY="78.47"
+                android:type="linear">
+                <item android:offset="0" android:color="#FF8C42"/>
+                <item android:offset="1" android:color="#FF6B1A"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
 </vector>
