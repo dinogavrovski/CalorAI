@@ -1,12 +1,18 @@
-fastapi==0.115.0
-uvicorn==0.30.0
-sqlalchemy==2.0.36
-psycopg2-binary==2.9.10
-pydantic==2.9.0
-python-dotenv==1.0.1
-python-jose[cryptography]==3.3.0
+# Pinned to versions that ship prebuilt wheels for Python 3.13/3.14.
+# (The older pins — psycopg2-binary 2.9.10, pydantic 2.9.0 — have no cp314 wheels,
+#  so pip fell back to compiling from source and required MSVC Build Tools + Rust.)
+fastapi==0.134.0
+uvicorn==0.41.0
+sqlalchemy==2.0.51
+psycopg2-binary==2.9.12
+pydantic[email]==2.12.5   # [email] -> email-validator, required by EmailStr
+python-dotenv==1.1.1
+python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.12
-groq==0.11.0
-google-auth==2.35.0
-httpx==0.27.0
+argon2-cffi==25.1.0   # primary password scheme in core/security.py
+bcrypt==5.0.0         # kept for verifying legacy bcrypt hashes
+python-multipart==0.0.22
+groq==1.5.0
+google-auth==2.49.1
+requests==2.32.5   # required by google.auth.transport.requests (used in auth.py)
+httpx==0.28.1
